@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  ::selection{background:#c2643a;color:#fff;}
+  .gp-scroll::-webkit-scrollbar{width:10px;height:10px;}
+  .gp-scroll::-webkit-scrollbar-thumb{background:#cdc4b2;border-radius:10px;border:3px solid transparent;background-clip:content-box;}
+  .gp-scroll::-webkit-scrollbar-thumb:hover{background:#b6ab95;background-clip:content-box;}
+  [data-theme="dark"] .gp-scroll::-webkit-scrollbar-thumb{background:#3a352f;background-clip:content-box;}
+  input,textarea,select,button{font-family:inherit;}
+  input:focus,textarea:focus,select:focus{outline:none;}
+  input::placeholder,textarea::placeholder{color:var(--muted2);}
+  @keyframes gpFade{from{opacity:.4;transform:translateY(7px);}to{opacity:1;transform:none;}}
+  @keyframes gpToast{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  @keyframes gpPulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  @keyframes gpSpin{to{transform:rotate(360deg);}}
+  .gp-route{}
+  [data-theme="light"]{
+    --ink:#201e1a;--forest:#2a2724;--forest2:#57514a;--clay:#c2643a;--clay2:#d6895d;
+    --bg:#edeae3;--paper:#ffffff;--paper2:#f6f3ec;--line:#e3ded2;--line2:#efe9df;
+    --muted:#8b857a;--muted2:#b3ada0;--sand:#e9e3d6;--barbg:rgba(237,234,227,.82);
+  }
+  [data-theme="dark"]{
+    --ink:#efe9df;--forest:#2f2c27;--forest2:#cbc4b7;--clay:#d3774a;--clay2:#e3a079;
+    --bg:#161513;--paper:#1f1d1a;--paper2:#262320;--line:#332f29;--line2:#2a2723;
+    --muted:#968f82;--muted2:#6c655b;--sand:#2a2723;--barbg:rgba(22,21,19,.82);
+  }
+</style>
+</helmet>
+
+<div class="gp-scroll" data-gp data-theme="{{ themeAttr }}" style="--serif:'Cormorant',Georgia,serif;--sans:'Golos Text',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;width:100%;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;">
+
+  <!-- ============ TOP BAR ============ -->
+  <header style="position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 22px;height:60px;background:var(--barbg);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);">
+    <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+      <div style="display:flex;align-items:center;gap:11px;cursor:pointer;" onClick="{{ goHome }}">
+        <div style="width:30px;height:30px;border-radius:9px;background:var(--clay);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="width:13px;height:13px;border:2px solid rgba(255,255,255,.92);border-radius:50%;border-right-color:transparent;transform:rotate(-20deg);"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;line-height:1.05;">
+          <span style="font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:-.01em;">Геопортал</span>
+          <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;">проф. В.&nbsp;Силантьев</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:5px;background:var(--sand);border:1px solid var(--line);border-radius:11px;padding:4px;">
+      <button onClick="{{ setPublic }}" style="{{ tabPublicStyle }}">Публичный сайт</button>
+      <button onClick="{{ setAdmin }}" style="{{ tabAdminStyle }}">Админка</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;justify-content:flex-end;min-width:0;flex:1;">
+      <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted);">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--clay2);display:inline-block;animation:gpPulse 2.4s infinite;"></span>
+          {{ savedLabel }}
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleTheme }}" title="Сменить тему" style="width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--forest2);flex-shrink:0;" style-hover="width:34px;height:34px;border-radius:10px;border:1px solid var(--clay2);background:var(--sand);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--clay);flex-shrink:0;">{{ themeIcon }}</button>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--clay),var(--forest2));flex-shrink:0;"></div>
+    </div>
+  </header>
+
+  <!-- ============ ADMIN ============ -->
+  <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;align-items:stretch;min-height:calc(100vh - 60px);">
+
+    <!-- sidebar -->
+    <nav style="width:236px;flex-shrink:0;border-right:1px solid var(--line);background:var(--paper2);padding:20px 14px;display:flex;flex-direction:column;gap:3px;position:sticky;top:60px;height:calc(100vh - 60px);overflow:auto;">
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted2);text-transform:uppercase;padding:4px 12px 10px;">Управление</div>
+      <sc-for list="{{ adminNav }}" as="item" hint-placeholder-count="6">
+        <button onClick="{{ item.go }}" style="{{ item.style }}">
+          <span style="font-family:var(--mono);font-size:11px;width:20px;text-align:center;opacity:.6;">{{ item.key }}</span>
+          <span style="flex:1;text-align:left;">{{ item.label }}</span>
+          <sc-if value="{{ item.count }}" hint-placeholder-val="{{ true }}"><span style="font-family:var(--mono);font-size:10.5px;color:var(--muted);">{{ item.count }}</span></sc-if>
+        </button>
+      </sc-for>
+      <div style="flex:1;"></div>
+      <button onClick="{{ goQuickAdd }}" style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:9px;padding:12px;border-radius:11px;border:none;background:var(--clay);color:#fff;font-family:var(--sans);font-weight:600;font-size:13.5px;cursor:pointer;box-shadow:0 6px 16px -6px rgba(194,100,58,.55);">
+        <span style="font-size:17px;line-height:0;font-weight:400;">+</span> Добавить материал
+      </button>
+    </nav>
+
+    <!-- admin content -->
+    <main class="gp-scroll" style="flex:1;min-width:0;overflow:auto;height:calc(100vh - 60px);">
+
+      <!-- DASHBOARD -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div class="gp-route" style="padding:34px 38px 80px;max-width:1180px;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:30px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--clay);text-transform:uppercase;margin-bottom:9px;">Панель управления</div>
+            <h1 style="font-family:var(--serif);font-weight:600;font-size:46px;line-height:1.06;margin:0;letter-spacing:-.01em;">Добрый день, Владимир&nbsp;Владимирович</h1>
+            <p style="color:var(--muted);margin:10px 0 0;font-size:15px;max-width:520px;">В хранилище <b style="color:var(--ink);">{{ totalCount }}</b> материалов. Публичная часть обновляется автоматически при публикации.</p>
+          </div>
+          <button onClick="{{ goQuickAdd }}" style="display:flex;align-items:center;gap:10px;padding:13px 20px;border-radius:12px;border:none;background:var(--clay);color:#fff;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 8px 20px -8px rgba(168,116,74,.7);white-space:nowrap;">
+            <span style="font-size:18px;line-height:0;font-weight:400;">+</span> Быстрое добавление
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px;">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+            <div onClick="{{ s.go }}" style="background:var(--paper);border:1px solid var(--line);border-radius:15px;padding:18px 18px 16px;cursor:pointer;transition:border-color .18s,transform .18s;" style-hover="background:var(--paper);border:1px solid var(--clay2);border-radius:15px;padding:18px 18px 16px;cursor:pointer;transform:translateY(-3px);">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);">{{ s.label }}</span>
+                <span style="width:9px;height:9px;border-radius:2px;background:{{ s.dot }};"></span>
+              </div>
+              <div style="font-family:var(--serif);font-size:38px;font-weight:500;margin-top:14px;line-height:1;">{{ s.value }}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:6px;">{{ s.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start;">
+          <!-- recent -->
+          <div style="background:var(--paper);border:1px solid var(--line);border-radius:18px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--line2);">
+              <h3 style="font-family:var(--serif);font-weight:600;font-size:18px;margin:0;">Недавние материалы</h3>
+              <button onClick="{{ goList }}" style="background:none;border:none;font-family:var(--mono);font-size:11px;color:var(--clay);cursor:pointer;letter-spacing:.04em;">все →</button>
+            </div>
+            <sc-for list="{{ recent }}" as="m" hint-placeholder-count="5">
+              <div onClick="{{ m.open }}" style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line2);cursor:pointer;transition:background .16s;" style-hover="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line2);cursor:pointer;background:var(--paper2);">
+                <span style="font-family:var(--mono);font-size:10px;font-weight:600;width:42px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:{{ m.tintBg }};color:{{ m.tintFg }};flex-shrink:0;text-transform:uppercase;letter-spacing:.02em;">{{ m.typeShort }}</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:500;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.title }}</div>
+                  <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.meta }}</div>
+                </div>
+                <span style="font-family:var(--mono);font-size:10px;font-weight:500;padding:4px 9px;border-radius:20px;background:{{ m.stBg }};color:{{ m.stFg }};white-space:nowrap;">{{ m.statusLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- right column -->
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div style="background:linear-gradient(150deg,#2c2926,#4a3a2f);border-radius:18px;padding:22px;color:#f4f1ea;">
+              <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;">Совет</div>
+              <p style="font-family:var(--serif);font-size:19px;line-height:1.32;margin:12px 0 18px;">Перетащите PDF или фото прямо в окно добавления — поля заполнятся автоматически.</p>
+              <button onClick="{{ goQuickAdd }}" style="background:var(--clay2);border:none;color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;">Попробовать</button>
+            </div>
+            <div style="background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px 20px;">
+              <h3 style="font-family:var(--serif);font-weight:600;font-size:16px;margin:0 0 14px;">Шаблоны</h3>
+              <sc-for list="{{ templates }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.use }}" style="display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--paper2);border:1px solid var(--line2);border-radius:11px;padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:border-color .16s;" style-hover="display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--sand);border:1px solid var(--clay2);border-radius:11px;padding:11px 13px;margin-bottom:8px;cursor:pointer;">
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--clay);">↳</span>
+                  <span style="flex:1;font-size:13px;font-weight:500;">{{ t.name }}</span>
+                  <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ t.kind }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- QUICK ADD (mounted separately below) -->
+      <sc-if value="{{ isAdd }}" hint-placeholder-val="{{ true }}">
+        <div class="gp-route" data-screen-label="quick-add" style="padding:26px 34px 90px;max-width:1280px;">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+            <button onClick="{{ goBack }}" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer;color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center;">←</button>
+            <div style="flex:1;">
+              <div style="font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--clay);">Новый материал</div>
+              <h1 style="font-family:var(--serif);font-weight:500;font-size:30px;margin:2px 0 0;letter-spacing:-.01em;">Быстрое добавление</h1>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:var(--sand);border:1px solid var(--line);border-radius:10px;padding:4px;">
+              <sc-for list="{{ layoutTabs }}" as="lt" hint-placeholder-count="2"><button onClick="{{ lt.go }}" style="{{ lt.style }}">{{ lt.label }}</button></sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:9px;margin-bottom:22px;">
+            <sc-for list="{{ addTypeTabs }}" as="tt" hint-placeholder-count="3"><button onClick="{{ tt.go }}" style="{{ tt.style }}">{{ tt.label }}</button></sc-for>
+          </div>
+
+          <div style="{{ addWrap }}">
+            <!-- ===== FORM COLUMN ===== -->
+            <div style="display:flex;flex-direction:column;gap:18px;">
+
+              <!-- drop zone -->
+              <div onDrop="{{ onDrop }}" onDragOver="{{ onDragOver }}" onDragEnter="{{ dragEnter }}" onDragLeave="{{ dragLeave }}" onClick="{{ pickFile }}" style="{{ dropZoneStyle }}">
+                <sc-if value="{{ hasFile }}" hint-placeholder-val="">
+                  <div style="display:flex;align-items:center;gap:14px;width:100%;">
+                    <div style="width:42px;height:42px;border-radius:10px;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:600;flex-shrink:0;">PDF</div>
+                    <div style="flex:1;min-width:0;text-align:left;">
+                      <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ fileName }}</div>
+                      <div style="font-family:var(--mono);font-size:11px;color:var(--clay);">✓ загружен · поля заполнены автоматически</div>
+                    </div>
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:5px 10px;">заменить</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noFile }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:9px;pointer-events:none;">
+                    <div style="width:46px;height:46px;border-radius:50%;border:2px dashed var(--clay2);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--clay);font-weight:300;">+</div>
+                    <div style="font-weight:600;font-size:15px;">{{ dropTitle }}</div>
+                    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">{{ dropHint }}</div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <!-- LEARNING fields -->
+              <sc-if value="{{ isLearning }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:16px;">
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Название</label>
+                  <input name="title" value="{{ f.title }}" onInput="{{ onFormInput }}" placeholder="Напр. Введение в палеонтологию" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:15px;color:var(--ink);" style-focus="width:100%;padding:12px 14px;border:1px solid var(--clay2);border-radius:11px;background:var(--paper);font-size:15px;color:var(--ink);box-shadow:0 0 0 3px rgba(168,116,74,.12);">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Дисциплина</label>
+                    <select name="discipline" value="{{ f.discipline }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                      <option>Общая геология</option><option>Кристаллография</option><option>Палеонтология</option><option>Историческая геология</option><option>Стратиграфия</option><option>Методы изучения керна</option><option>Полевая практика</option><option>Региональная геология</option><option>Нефтегазовая геология</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Тип материала</label>
+                    <select name="mtype" value="{{ f.mtype }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                      <option>Лекция</option><option>Презентация</option><option>Задание</option><option>Таблица</option><option>Методичка</option><option>Фото</option><option>Другое</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Краткое описание</label>
+                  <textarea name="desc" value="{{ f.desc }}" onInput="{{ onFormInput }}" placeholder="Что внутри, для кого, как использовать…" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);min-height:84px;resize:vertical;line-height:1.5;"></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:14px;">
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Курс / уровень</label>
+                    <select name="course" value="{{ f.course }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                      <option>Бакалавриат, 1 курс</option><option>Бакалавриат, 2 курс</option><option>Бакалавриат, 3 курс</option><option>Бакалавриат, 4 курс</option><option>Магистратура</option><option>Аспирантура</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Год</label>
+                    <input name="year" value="{{ f.year }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                  </div>
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Язык</label>
+                    <select name="lang" value="{{ f.lang }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                      <option>Русский</option><option>English</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              </sc-if>
+
+              <!-- PUBLICATION fields -->
+              <sc-if value="{{ isPublication }}" hint-placeholder-val="">
+              <div style="display:flex;flex-direction:column;gap:16px;">
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Авторы</label>
+                  <input name="authors" value="{{ f.authors }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                </div>
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Название</label>
+                  <input name="title" value="{{ f.title }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:15px;color:var(--ink);">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr .7fr;gap:14px;">
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Тип публикации</label>
+                    <select name="ptype" value="{{ f.ptype }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                      <option>Статья</option><option>Монография</option><option>Тезисы</option><option>Учебное пособие</option><option>Другое</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Год</label>
+                    <input name="year" value="{{ f.year }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                  </div>
+                </div>
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Журнал / издательство</label>
+                  <input name="journal" value="{{ f.journal }}" onInput="{{ onFormInput }}" placeholder="Напр. Палеонтологический журнал" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">DOI</label>
+                    <input name="doi" value="{{ f.doi }}" onInput="{{ onFormInput }}" placeholder="10.xxxx/xxxx" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);font-family:var(--mono);">
+                  </div>
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Научная тема</label>
+                    <select name="topic" value="{{ f.topic }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                      <option>Пермские отложения Среднего Поволжья</option><option>Неморские двустворчатые моллюски палеозоя</option><option>Стратиграфия карбона и перми</option><option>Доманиковые отложения</option><option>Визейские отложения Волго-Уральской НГП</option><option>Геологическое образование</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Регион</label>
+                    <input name="region" value="{{ f.region }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                  </div>
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Геол. возраст</label>
+                    <input name="age" value="{{ f.age }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                  </div>
+                </div>
+              </div>
+              </sc-if>
+
+              <!-- PHOTO fields -->
+              <sc-if value="{{ isPhoto }}" hint-placeholder-val="">
+              <div style="display:flex;flex-direction:column;gap:16px;">
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Название</label>
+                  <input name="title" value="{{ f.title }}" onInput="{{ onFormInput }}" placeholder="Напр. Обнажение пермских красноцветов" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:15px;color:var(--ink);">
+                </div>
+                <div style="display:grid;grid-template-columns:.7fr 1.3fr;gap:14px;">
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Год</label>
+                    <input name="year" value="{{ f.year }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                  </div>
+                  <div>
+                    <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Место съёмки</label>
+                    <input name="region" value="{{ f.region }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);">
+                  </div>
+                </div>
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Тип объекта</label>
+                  <select name="mtype" value="{{ f.mtype }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                    <option>Экспедиция</option><option>Обнажение</option><option>Керн</option><option>Образец</option><option>Ископаемое</option><option>Шлиф</option><option>Другое</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Краткое описание</label>
+                  <textarea name="desc" value="{{ f.desc }}" onInput="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);min-height:70px;resize:vertical;"></textarea>
+                </div>
+              </div>
+              </sc-if>
+
+              <!-- TAGS (shared) -->
+              <div>
+                <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Теги</label>
+                <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:11px;background:var(--paper);min-height:46px;">
+                  <sc-for list="{{ formTags }}" as="tg" hint-placeholder-count="2">
+                    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--sand);border:1px solid var(--line);border-radius:7px;padding:4px 6px 4px 10px;font-size:12.5px;font-weight:500;">{{ tg.label }}<button onClick="{{ tg.remove }}" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px;line-height:0;padding:0;">×</button></span>
+                  </sc-for>
+                  <input value="{{ f.tagDraft }}" onInput="{{ onTagInput }}" onKeyDown="{{ onTagKey }}" placeholder="добавить тег и Enter…" style="flex:1;min-width:130px;border:none;background:none;font-size:13.5px;color:var(--ink);padding:5px 2px;">
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center;">
+                  <span style="font-family:var(--mono);font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;">подсказки</span>
+                  <sc-for list="{{ tagSuggestions }}" as="sg" hint-placeholder-count="5">
+                    <button onClick="{{ sg.use }}" style="border:1px dashed var(--line);background:none;border-radius:7px;padding:4px 10px;font-size:12px;color:var(--forest2);cursor:pointer;" style-hover="border:1px dashed var(--clay2);background:var(--sand);border-radius:7px;padding:4px 10px;font-size:12px;color:var(--clay);cursor:pointer;">+ {{ sg.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <!-- access + actions -->
+              <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;border-top:1px solid var(--line2);padding-top:18px;margin-top:2px;">
+                <div style="flex:1;min-width:200px;">
+                  <label style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;">Уровень доступа</label>
+                  <select name="access" value="{{ f.access }}" onChange="{{ onFormInput }}" style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);cursor:pointer;">
+                    <option value="open">Открыто — виден всем</option><option value="link">По прямой ссылке</option><option value="students">Только для студентов</option><option value="request">По запросу</option><option value="hidden">Скрыто</option><option value="owner">Только для владельца</option>
+                  </select>
+                </div>
+                <button onClick="{{ saveDraft }}" style="padding:13px 20px;border-radius:11px;border:1px solid var(--line);background:var(--paper);color:var(--forest2);font-weight:600;font-size:14px;cursor:pointer;">Сохранить черновик</button>
+                <button onClick="{{ publishForm }}" style="padding:13px 24px;border-radius:11px;border:none;background:var(--clay);color:#fff;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 8px 20px -8px rgba(194,100,58,.55);">Опубликовать →</button>
+              </div>
+            </div>
+
+            <!-- ===== PREVIEW COLUMN ===== -->
+            <sc-if value="{{ showPreview }}" hint-placeholder-val="{{ true }}">
+            <div style="position:sticky;top:78px;">
+              <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:11px;display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--clay2);animation:gpPulse 2s infinite;"></span> Так увидят на сайте</div>
+
+              <sc-if value="{{ isPublication }}" hint-placeholder-val="">
+                <div style="background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 12px 30px -18px rgba(0,0,0,.25);">
+                  <div style="font-family:var(--mono);font-size:11px;color:var(--clay);margin-bottom:8px;">{{ f.year }} · {{ pvPtype }}</div>
+                  <h3 style="font-family:var(--serif);font-weight:600;font-size:21px;line-height:1.22;margin:0 0 10px;">{{ pvTitle }}</h3>
+                  <div style="font-size:13px;color:var(--forest2);margin-bottom:4px;">{{ pvAuthors }}</div>
+                  <div style="font-size:13px;font-style:italic;color:var(--muted);font-family:var(--serif);">{{ pvJournal }}</div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ notPublication }}" hint-placeholder-val="{{ true }}">
+                <div style="background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 12px 30px -18px rgba(0,0,0,.25);">
+                  <div style="height:120px;background:repeating-linear-gradient(135deg,{{ pvTintBg }},{{ pvTintBg }} 11px,var(--paper2) 11px,var(--paper2) 22px);display:flex;align-items:flex-end;justify-content:space-between;padding:12px;">
+                    <span style="font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 9px;border-radius:7px;background:{{ pvTintBg }};color:{{ pvTintFg }};text-transform:uppercase;">{{ pvTypeShort }}</span>
+                    <span style="font-family:var(--mono);font-size:10px;font-weight:500;padding:5px 10px;border-radius:20px;background:{{ pvStBg }};color:{{ pvStFg }};">{{ pvStatusLabel }}</span>
+                  </div>
+                  <div style="padding:16px 18px 18px;">
+                    <h3 style="font-family:var(--serif);font-weight:600;font-size:19px;line-height:1.25;margin:0 0 8px;">{{ pvTitle }}</h3>
+                    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:11px;">{{ pvDisc }} · {{ pvYear }}</div>
+                    <p style="font-size:13.5px;color:var(--forest2);line-height:1.5;margin:0 0 14px;">{{ pvDesc }}</p>
+                    <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line2);padding-top:13px;">
+                      <span style="font-family:var(--mono);font-size:11px;color:var(--clay);">↓ Скачать</span>
+                      <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ pvAccess }}</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <div style="margin-top:14px;background:var(--sand);border:1px solid var(--line);border-radius:13px;padding:14px 16px;font-size:12.5px;color:var(--forest2);line-height:1.5;">
+                <b style="font-family:var(--serif);">Куда попадёт:</b> Студентам → {{ pvDisc }} → {{ pvTypeShort }}. Появится сразу после публикации.
+              </div>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+      <div class="gp-route" data-screen-label="list" style="padding:30px 34px 80px;max-width:1180px;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--clay);margin-bottom:8px;">Хранилище</div>
+            <h1 style="font-family:var(--serif);font-weight:500;font-size:32px;margin:0;letter-spacing:-.01em;">Все материалы</h1>
+          </div>
+          <button onClick="{{ goQuickAdd }}" style="display:flex;align-items:center;gap:9px;padding:11px 18px;border-radius:11px;border:none;background:var(--clay);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;"><span style="font-size:17px;line-height:0;font-weight:400;">+</span> Добавить</button>
+        </div>
+
+        <!-- toolbar -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;">
+          <div style="position:relative;flex:1;min-width:240px;">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:14px;">⌕</span>
+            <input value="{{ lq }}" onInput="{{ onSearch }}" placeholder="Поиск по названию, описанию, тегам…" style="width:100%;padding:11px 14px 11px 38px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);" style-focus="width:100%;padding:11px 14px 11px 38px;border:1px solid var(--clay2);border-radius:11px;background:var(--paper);font-size:14px;color:var(--ink);box-shadow:0 0 0 3px rgba(168,116,74,.1);">
+          </div>
+          <select value="{{ ftype }}" onChange="{{ onFType }}" style="padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:13px;color:var(--forest2);cursor:pointer;">
+            <option value="all">Все типы</option><option>Лекция</option><option>Презентация</option><option>Методичка</option><option>Таблица</option><option>Задание</option>
+          </select>
+          <select value="{{ fdisc }}" onChange="{{ onFDisc }}" style="padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:13px;color:var(--forest2);cursor:pointer;max-width:200px;">
+            <option value="all">Все дисциплины</option><option>Общая геология</option><option>Кристаллография</option><option>Палеонтология</option><option>Историческая геология</option><option>Стратиграфия</option><option>Методы изучения керна</option><option>Полевая практика</option><option>Региональная геология</option><option>Нефтегазовая геология</option>
+          </select>
+          <select value="{{ fstatus }}" onChange="{{ onFStatus }}" style="padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-size:13px;color:var(--forest2);cursor:pointer;">
+            <option value="all">Любой статус</option><option value="published">Опубликовано</option><option value="draft">Черновик</option><option value="hidden">Скрыто</option>
+          </select>
+          <sc-if value="{{ filterActive }}" hint-placeholder-val=""><button onClick="{{ resetFilter }}" style="padding:11px 14px;border:1px solid var(--line);border-radius:11px;background:none;font-size:13px;color:var(--clay);cursor:pointer;">сбросить ×</button></sc-if>
+        </div>
+
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px;">Найдено: {{ listCount }} из {{ totalMat }}</div>
+
+        <!-- table -->
+        <div style="background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 150px 70px 130px 96px;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);">
+            <div>Материал</div><div>Дисциплина</div><div>Год</div><div>Статус</div><div style="text-align:right;">Действия</div>
+          </div>
+          <sc-for list="{{ listRows }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1fr 150px 70px 130px 96px;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line2);align-items:center;transition:background .14s;" style-hover="display:grid;grid-template-columns:1fr 150px 70px 130px 96px;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line2);align-items:center;background:var(--paper2);">
+              <div style="display:flex;align-items:center;gap:12px;min-width:0;cursor:pointer;" onClick="{{ r.edit }}">
+                <span style="font-family:var(--mono);font-size:10px;font-weight:600;width:40px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:{{ r.tintBg }};color:{{ r.tintFg }};flex-shrink:0;">{{ r.typeShort }}</span>
+                <div style="min-width:0;">
+                  <div style="font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.title }}</div>
+                  <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.tagStr }}</div>
+                </div>
+              </div>
+              <div style="font-size:12.5px;color:var(--forest2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.discipline }}</div>
+              <div style="font-family:var(--mono);font-size:12px;color:var(--muted);">{{ r.year }}</div>
+              <div><button onClick="{{ r.cycle }}" title="Переключить статус" style="font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 11px;border-radius:20px;border:none;background:{{ r.stBg }};color:{{ r.stFg }};cursor:pointer;">{{ r.statusLabel }}</button></div>
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                <button onClick="{{ r.edit }}" title="Редактировать" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--paper);cursor:pointer;color:var(--forest2);font-size:13px;">✎</button>
+                <button onClick="{{ r.del }}" title="Удалить" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--paper);cursor:pointer;color:var(--muted);font-size:14px;" style-hover="width:30px;height:30px;border-radius:8px;border:1px solid #d9b3a8;background:#f7ece8;cursor:pointer;color:#9c5a4a;font-size:14px;">×</button>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noRows }}" hint-placeholder-val="">
+            <div style="padding:56px 20px;text-align:center;color:var(--muted);">
+              <div style="font-family:var(--serif);font-size:20px;margin-bottom:6px;color:var(--forest2);">Ничего не найдено</div>
+              <div style="font-size:13px;">Измените запрос или сбросьте фильтры.</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isPhotos }}" hint-placeholder-val="{{ true }}">
+      <div class="gp-route" data-screen-label="admin-photos" style="padding:30px 34px 80px;max-width:1180px;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--clay);margin-bottom:8px;">Фотоархив · {{ photoCount }} снимков</div>
+            <h1 style="font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.04;margin:0;">Фотографии</h1>
+          </div>
+          <button onClick="{{ addPhotoCta }}" style="display:flex;align-items:center;gap:9px;padding:11px 18px;border-radius:11px;border:none;background:var(--clay);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;"><span style="font-size:17px;line-height:0;font-weight:400;">+</span> Добавить фото</button>
+        </div>
+
+        <div onDrop="{{ onPhotoDrop }}" onDragOver="{{ photoDragOver }}" onDragEnter="{{ photoEnter }}" onDragLeave="{{ photoLeave }}" onClick="{{ addPhotoCta }}" style="{{ photoDropStyle }}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;">
+            <div style="width:44px;height:44px;border-radius:13px;border:2px dashed var(--clay2);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--clay);">⇪</div>
+            <div style="font-weight:600;font-size:15px;">Перетащите фотографии сюда</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">Можно сразу несколько · подписи и год заполните после</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 16px;">
+          <sc-for list="{{ photoGroups }}" as="g" hint-placeholder-count="6">
+            <span style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--line);border-radius:20px;font-size:12.5px;color:var(--forest2);background:var(--paper);">{{ g.name }}<span style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ g.count }}</span></span>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">
+          <sc-for list="{{ photoCards }}" as="p" hint-placeholder-count="8">
+            <div onClick="{{ p.open }}" style="background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .16s;" style-hover="background:var(--paper);border:1px solid var(--clay2);border-radius:14px;overflow:hidden;cursor:pointer;transform:translateY(-3px);">
+              <div style="aspect-ratio:4/3;background:repeating-linear-gradient(135deg,{{ p.tint }},{{ p.tint }} 13px,rgba(255,255,255,.16) 13px,rgba(255,255,255,.16) 26px);position:relative;display:flex;align-items:flex-end;padding:10px;">
+                <span style="font-family:var(--mono);font-size:9.5px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(20,18,16,.62);color:#fff;text-transform:uppercase;letter-spacing:.04em;">{{ p.otype }}</span>
+              </div>
+              <div style="padding:12px 13px 14px;">
+                <div style="font-weight:600;font-size:13.5px;line-height:1.3;margin-bottom:5px;">{{ p.title }}</div>
+                <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);">{{ p.region }} · {{ p.year }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isTopics }}" hint-placeholder-val="{{ true }}">
+      <div class="gp-route" data-screen-label="admin-topics" style="padding:30px 34px 80px;max-width:1180px;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:8px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--clay);margin-bottom:8px;">Связывание материалов</div>
+            <h1 style="font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.04;margin:0;">Научные темы</h1>
+          </div>
+          <button onClick="{{ newTopic }}" style="display:flex;align-items:center;gap:9px;padding:11px 18px;border-radius:11px;border:none;background:var(--clay);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;"><span style="font-size:17px;line-height:0;font-weight:400;">+</span> Новая тема</button>
+        </div>
+        <p style="color:var(--muted);font-size:14px;margin:0 0 24px;max-width:580px;">Тема объединяет публикации, фотографии и архивные материалы в одно направление. Привязанные материалы автоматически появляются на странице темы.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;">
+          <sc-for list="{{ topicCards }}" as="t" hint-placeholder-count="6">
+            <div onClick="{{ t.open }}" style="background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px;cursor:pointer;transition:border-color .16s;display:flex;flex-direction:column;" style-hover="background:var(--paper);border:1px solid var(--clay2);border-radius:16px;padding:20px;cursor:pointer;display:flex;flex-direction:column;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;">
+                <span style="font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:6px;background:var(--sand);color:var(--forest2);">{{ t.age }}</span>
+                <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ t.region }}</span>
+              </div>
+              <h3 style="font-family:var(--serif);font-weight:600;font-size:21px;line-height:1.18;margin:0 0 8px;">{{ t.name }}</h3>
+              <p style="font-size:13px;color:var(--forest2);line-height:1.5;margin:0 0 16px;flex:1;">{{ t.desc }}</p>
+              <div style="display:flex;gap:8px;border-top:1px solid var(--line2);padding-top:14px;">
+                <div style="flex:1;text-align:center;"><div style="font-family:var(--serif);font-size:22px;font-weight:600;color:var(--clay);">{{ t.pubs }}</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">публ.</div></div>
+                <div style="flex:1;text-align:center;border-left:1px solid var(--line2);border-right:1px solid var(--line2);"><div style="font-family:var(--serif);font-size:22px;font-weight:600;color:var(--clay);">{{ t.photos }}</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">фото</div></div>
+                <div style="flex:1;text-align:center;"><div style="font-family:var(--serif);font-size:22px;font-weight:600;color:var(--clay);">{{ t.archive }}</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">архив</div></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+    </main>
+  </div>
+  </sc-if>
+
+  <!-- ============ PUBLIC ============ -->
+  <sc-if value="{{ isPublic }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="public">
+    <!-- public nav -->
+    <div style="position:sticky;top:60px;z-index:30;background:var(--barbg);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);">
+      <div style="max-width:1180px;margin:0 auto;padding:0 32px;display:flex;align-items:center;gap:18px;height:52px;">
+        <div class="gp-scroll" style="display:flex;align-items:center;gap:24px;overflow-x:auto;flex:1;min-width:0;">
+          <sc-for list="{{ pubNav }}" as="n" hint-placeholder-count="7"><button onClick="{{ n.go }}" style="{{ n.style }}">{{ n.label }}</button></sc-for>
+        </div>
+        <div style="position:relative;flex-shrink:0;width:230px;">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:13px;pointer-events:none;">⌕</span>
+          <input value="{{ searchQuery }}" onInput="{{ onGlobalSearch }}" placeholder="Поиск по сайту…" style="width:100%;padding:8px 12px 8px 31px;border:1px solid var(--line);border-radius:9px;background:var(--paper);font-size:13px;color:var(--ink);" style-focus="width:100%;padding:8px 12px 8px 31px;border:1px solid var(--clay2);border-radius:9px;background:var(--paper);font-size:13px;color:var(--ink);box-shadow:0 0 0 3px rgba(194,100,58,.1);">
+        </div>
+      </div>
+    </div>
+
+    <!-- HOME -->
+    <sc-if value="{{ pubHome }}" hint-placeholder-val="{{ true }}">
+    <div class="gp-route">
+      <section style="max-width:1180px;margin:0 auto;padding:64px 32px 40px;">
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:48px;align-items:center;">
+          <div>
+            <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:18px;">Геология · палеонтология · стратиграфия</div>
+            <h1 style="font-family:var(--serif);font-weight:600;font-size:62px;line-height:1.02;letter-spacing:-.015em;margin:0 0 22px;">Владимир Силантьев</h1>
+            <p style="font-size:18px;line-height:1.6;color:var(--forest2);max-width:560px;margin:0 0 28px;">Профессор геологии. Сорок лет полевых исследований пермских отложений Среднего Поволжья, неморских двустворок палеозоя и стратиграфии карбона и перми. Здесь — учебные материалы, публикации и архив экспедиций.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <button onClick="{{ goStudents }}" style="padding:13px 22px;border-radius:12px;border:none;background:var(--clay);color:#fff;font-weight:600;font-size:14.5px;cursor:pointer;box-shadow:0 8px 20px -8px rgba(194,100,58,.5);">Студентам →</button>
+              <button onClick="{{ goPubsPage }}" style="padding:13px 22px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--forest2);font-weight:600;font-size:14.5px;cursor:pointer;">Публикации</button>
+            </div>
+          </div>
+          <div style="aspect-ratio:4/5;border-radius:18px;background:repeating-linear-gradient(135deg,var(--sand),var(--sand) 16px,var(--paper2) 16px,var(--paper2) 32px);border:1px solid var(--line);display:flex;align-items:flex-end;padding:18px;">
+            <span style="font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--paper);padding:6px 11px;border-radius:7px;border:1px solid var(--line);">портрет · фото профессора</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:54px;">
+          <div style="background:var(--paper);padding:22px 24px;"><div style="font-family:var(--serif);font-size:34px;font-weight:600;">{{ hHeroYears }}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">лет в поле</div></div>
+          <div style="background:var(--paper);padding:22px 24px;"><div style="font-family:var(--serif);font-size:34px;font-weight:600;">{{ hHeroPub }}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">публикаций</div></div>
+          <div style="background:var(--paper);padding:22px 24px;"><div style="font-family:var(--serif);font-size:34px;font-weight:600;">{{ hHeroMat }}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">материалов</div></div>
+          <div style="background:var(--paper);padding:22px 24px;"><div style="font-family:var(--serif);font-size:34px;font-weight:600;">{{ hHeroPhoto }}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">фотографий</div></div>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:30px 32px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;">
+          <h2 style="font-family:var(--serif);font-weight:600;font-size:30px;margin:0;">Избранные публикации</h2>
+          <button onClick="{{ goPubsPage }}" style="font-family:var(--mono);font-size:12px;color:var(--clay);background:none;border:none;cursor:pointer;">все публикации →</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+          <sc-for list="{{ featuredPubs }}" as="p" hint-placeholder-count="3">
+            <div onClick="{{ p.open }}" style="background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;cursor:pointer;display:flex;flex-direction:column;transition:border-color .16s;" style-hover="background:var(--paper);border:1px solid var(--clay2);border-radius:16px;padding:22px;cursor:pointer;display:flex;flex-direction:column;">
+              <div style="font-family:var(--mono);font-size:11px;color:var(--clay);margin-bottom:10px;">{{ p.year }} · {{ p.ptype }}</div>
+              <h3 style="font-family:var(--serif);font-weight:600;font-size:21px;line-height:1.22;margin:0 0 12px;flex:1;">{{ p.title }}</h3>
+              <div style="font-size:13px;color:var(--forest2);margin-bottom:4px;">{{ p.authors }}</div>
+              <div style="font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);">{{ p.journal }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:30px 32px;">
+        <h2 style="font-family:var(--serif);font-weight:600;font-size:30px;margin:0 0 22px;">Студентам — по дисциплинам</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;">
+          <sc-for list="{{ homeDiscs }}" as="d" hint-placeholder-count="6">
+            <button onClick="{{ d.go }}" style="text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:border-color .16s;" style-hover="text-align:left;background:var(--sand);border:1px solid var(--clay2);border-radius:14px;padding:18px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <span style="font-family:var(--serif);font-size:18px;font-weight:600;line-height:1.2;">{{ d.name }}</span>
+              <span style="font-family:var(--mono);font-size:12px;color:var(--clay);flex-shrink:0;">{{ d.count }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:30px 32px 70px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;">
+          <h2 style="font-family:var(--serif);font-weight:600;font-size:30px;margin:0;">Из фотоархива</h2>
+          <button onClick="{{ goPhotosPage }}" style="font-family:var(--mono);font-size:12px;color:var(--clay);background:none;border:none;cursor:pointer;">весь архив →</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
+          <sc-for list="{{ homePhotos }}" as="p" hint-placeholder-count="6">
+            <div style="aspect-ratio:1;border-radius:12px;background:repeating-linear-gradient(135deg,{{ p.tint }},{{ p.tint }} 11px,rgba(255,255,255,.16) 11px,rgba(255,255,255,.16) 22px);border:1px solid var(--line);position:relative;">
+              <span style="position:absolute;left:8px;bottom:8px;font-family:var(--mono);font-size:8.5px;font-weight:600;padding:3px 6px;border-radius:5px;background:rgba(20,18,16,.6);color:#fff;text-transform:uppercase;">{{ p.year }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- ABOUT -->
+    <sc-if value="{{ pubAbout }}" hint-placeholder-val="">
+    <div class="gp-route">
+      <section style="max-width:820px;margin:0 auto;padding:60px 32px 70px;">
+        <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:16px;">Обо мне</div>
+        <h1 style="font-family:var(--serif);font-weight:600;font-size:46px;line-height:1.06;margin:0 0 28px;">Владимир Владимирович Силантьев</h1>
+        <p style="font-size:18px;line-height:1.7;color:var(--forest2);margin:0 0 18px;">Доктор геолого-минералогических наук, профессор. Более сорока лет занимаюсь полевой и кабинетной геологией Волго-Уральского региона. Основные направления — стратиграфия карбона и перми, палеонтология неморских двустворчатых моллюсков, фации и нефтеносность доманиковых отложений.</p>
+        <p style="font-size:18px;line-height:1.7;color:var(--forest2);margin:0 0 40px;">С 1983 года — ежегодные экспедиции по Среднему Поволжью и Прикамью. Веду курсы по общей геологии, кристаллографии, палеонтологии и исторической геологии. Этот сайт собирает в одном месте учебные материалы для студентов, публикации и архив полевых данных.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+          <div style="background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;">
+            <h3 style="font-family:var(--serif);font-weight:600;font-size:20px;margin:0 0 12px;">Научные интересы</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--forest2);">
+              <div>· Стратиграфия карбона и перми</div><div>· Неморские двустворки палеозоя</div><div>· Доманиковые отложения, нефтеносность</div><div>· Региональная геология Волго-Урала</div>
+            </div>
+          </div>
+          <div style="background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;">
+            <h3 style="font-family:var(--serif);font-weight:600;font-size:20px;margin:0 0 12px;">Контакты</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--forest2);font-family:var(--mono);">
+              <div>silantiev@kpfu.ru</div><div>каф. региональной геологии</div><div>+7 (8XX) XXX-XX-XX</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- STUDENTS -->
+    <sc-if value="{{ pubStudents }}" hint-placeholder-val="">
+    <div class="gp-route">
+      <section style="max-width:1180px;margin:0 auto;padding:56px 32px 70px;">
+        <sc-if value="{{ noSelDisc }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:14px;">Студентам</div>
+          <h1 style="font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.05;margin:0 0 12px;">Учебные материалы</h1>
+          <p style="font-size:16px;color:var(--forest2);max-width:560px;margin:0 0 36px;">Выберите дисциплину — лекции, презентации, методички и задания собираются автоматически из админки по мере публикации.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;">
+            <sc-for list="{{ studentDiscs }}" as="d" hint-placeholder-count="6">
+              <button onClick="{{ d.go }}" style="text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:24px;cursor:pointer;transition:border-color .16s;" style-hover="text-align:left;background:var(--paper);border:1px solid var(--clay2);border-radius:16px;padding:24px;cursor:pointer;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--clay);">{{ d.count }} материалов</span>
+                  <span style="color:var(--clay);font-size:18px;">→</span>
+                </div>
+                <div style="font-family:var(--serif);font-size:24px;font-weight:600;line-height:1.18;">{{ d.name }}</div>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasSelDisc }}" hint-placeholder-val="">
+          <button onClick="{{ backToDiscs }}" style="display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--clay);font-family:var(--mono);font-size:12px;cursor:pointer;margin-bottom:18px;">← все дисциплины</button>
+          <h1 style="font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.05;margin:0 0 6px;">{{ selDisc }}</h1>
+          <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:34px;">{{ discCount }} материалов</div>
+          <sc-for list="{{ discGroups }}" as="g" hint-placeholder-count="3">
+            <div style="margin-bottom:34px;">
+              <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--forest2);border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:16px;">{{ g.type }}</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+                <sc-for list="{{ g.items }}" as="m" hint-placeholder-count="2">
+                  <div onClick="{{ m.open }}" style="background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;display:flex;flex-direction:column;transition:border-color .16s;" style-hover="background:var(--paper);border:1px solid var(--clay2);border-radius:14px;padding:18px;cursor:pointer;display:flex;flex-direction:column;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+                      <span style="font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 8px;border-radius:6px;background:{{ m.tintBg }};color:{{ m.tintFg }};text-transform:uppercase;">{{ m.typeShort }}</span>
+                      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">{{ m.year }}</span>
+                    </div>
+                    <h3 style="font-family:var(--serif);font-weight:600;font-size:18px;line-height:1.25;margin:0 0 8px;">{{ m.title }}</h3>
+                    <p style="font-size:13px;color:var(--forest2);line-height:1.5;margin:0 0 14px;flex:1;">{{ m.desc }}</p>
+                    <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line2);padding-top:11px;">
+                      <span style="font-family:var(--mono);font-size:11px;color:var(--clay);">↓ Скачать</span>
+                      <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ m.access }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </sc-if>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- PUBLICATIONS -->
+    <sc-if value="{{ pubPublications }}" hint-placeholder-val="">
+    <div class="gp-route">
+      <section style="max-width:980px;margin:0 auto;padding:56px 32px 70px;">
+        <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:14px;">Научная работа</div>
+        <h1 style="font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.05;margin:0 0 26px;">Публикации</h1>
+        <div style="position:relative;margin-bottom:16px;">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted2);">⌕</span>
+          <input value="{{ pubQuery }}" onInput="{{ onPubSearch }}" placeholder="Поиск по названию, авторам, теме, региону…" style="width:100%;padding:12px 14px 12px 38px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-size:14px;color:var(--ink);" style-focus="width:100%;padding:12px 14px 12px 38px;border:1px solid var(--clay2);border-radius:12px;background:var(--paper);font-size:14px;color:var(--ink);box-shadow:0 0 0 3px rgba(194,100,58,.1);">
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px;">
+          <sc-for list="{{ collChips }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button></sc-for>
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px;">{{ pubListCount }} публикаций</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <sc-for list="{{ pubList }}" as="p" hint-placeholder-count="5">
+            <div onClick="{{ p.open }}" style="display:grid;grid-template-columns:64px 1fr;gap:18px;padding:20px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .14s;" style-hover="display:grid;grid-template-columns:64px 1fr;gap:18px;padding:20px 16px;border-bottom:1px solid var(--line);cursor:pointer;background:var(--paper2);">
+              <div style="font-family:var(--serif);font-size:26px;font-weight:600;color:var(--clay);line-height:1;">{{ p.year }}</div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:5px;background:var(--sand);color:var(--forest2);text-transform:uppercase;letter-spacing:.04em;">{{ p.ptype }}</span></div>
+                <h3 style="font-family:var(--serif);font-weight:600;font-size:21px;line-height:1.25;margin:0 0 6px;">{{ p.title }}</h3>
+                <div style="font-size:13.5px;color:var(--forest2);margin-bottom:3px;">{{ p.authors }}</div>
+                <div style="font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);">{{ p.journal }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- PHOTOS -->
+    <sc-if value="{{ pubPhotos }}" hint-placeholder-val="">
+    <div class="gp-route">
+      <section style="max-width:1180px;margin:0 auto;padding:56px 32px 70px;">
+        <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:14px;">Фотоархив экспедиций</div>
+        <h1 style="font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.05;margin:0 0 24px;">Фотоархив</h1>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px;">
+          <sc-for list="{{ pubPhotoGroups }}" as="g" hint-placeholder-count="6"><span style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border:1px solid var(--line);border-radius:20px;font-size:12.5px;color:var(--forest2);background:var(--paper);">{{ g.name }}<span style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ g.count }}</span></span></sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;">
+          <sc-for list="{{ pubPhotoCards }}" as="p" hint-placeholder-count="8">
+            <div onClick="{{ p.open }}" style="background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .16s;" style-hover="background:var(--paper);border:1px solid var(--clay2);border-radius:14px;overflow:hidden;cursor:pointer;transform:translateY(-3px);">
+              <div style="aspect-ratio:4/3;background:repeating-linear-gradient(135deg,{{ p.tint }},{{ p.tint }} 13px,rgba(255,255,255,.16) 13px,rgba(255,255,255,.16) 26px);display:flex;align-items:flex-end;padding:10px;">
+                <span style="font-family:var(--mono);font-size:9.5px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(20,18,16,.62);color:#fff;text-transform:uppercase;letter-spacing:.04em;">{{ p.otype }}</span>
+              </div>
+              <div style="padding:12px 13px 14px;">
+                <div style="font-weight:600;font-size:13.5px;line-height:1.3;margin-bottom:5px;font-family:var(--serif);">{{ p.title }}</div>
+                <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);">{{ p.region }} · {{ p.year }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- RESEARCH -->
+    <sc-if value="{{ pubResearch }}" hint-placeholder-val="">
+    <div class="gp-route">
+      <section style="max-width:1180px;margin:0 auto;padding:56px 32px 70px;">
+        <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:14px;">Направления исследований</div>
+        <h1 style="font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.05;margin:0 0 12px;">Научные темы</h1>
+        <p style="font-size:16px;color:var(--forest2);max-width:580px;margin:0 0 36px;">Каждая тема объединяет публикации, фотографии и архивные материалы по одному направлению.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+          <sc-for list="{{ pubTopics }}" as="t" hint-placeholder-count="6">
+            <div onClick="{{ t.open }}" style="background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:26px;cursor:pointer;display:flex;flex-direction:column;transition:border-color .16s;" style-hover="background:var(--paper);border:1px solid var(--clay2);border-radius:18px;padding:26px;cursor:pointer;display:flex;flex-direction:column;">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:13px;"><span style="font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:6px;background:var(--sand);color:var(--forest2);">{{ t.age }}</span><span style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ t.region }}</span></div>
+              <h3 style="font-family:var(--serif);font-weight:600;font-size:25px;line-height:1.16;margin:0 0 10px;">{{ t.name }}</h3>
+              <p style="font-size:14px;color:var(--forest2);line-height:1.55;margin:0 0 18px;flex:1;">{{ t.desc }}</p>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--clay);">{{ t.pubs }} публ. · {{ t.photos }} фото · {{ t.archive }} архив</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- ARCHIVE -->
+    <sc-if value="{{ pubArchive }}" hint-placeholder-val="">
+    <div class="gp-route">
+      <section style="max-width:980px;margin:0 auto;padding:56px 32px 70px;">
+        <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:14px;">Неопубликованные данные</div>
+        <h1 style="font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.05;margin:0 0 14px;">Архив материалов</h1>
+        <p style="font-size:16px;color:var(--forest2);max-width:600px;margin:0 0 30px;">Полевые дневники, схемы, таблицы и сканы. Часть материалов открыта, часть доступна по запросу или только для студентов.</p>
+        <div style="background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;">
+          <sc-for list="{{ archiveItems }}" as="a" hint-placeholder-count="6">
+            <div onClick="{{ a.open }}" style="display:grid;grid-template-columns:1fr 150px 70px 160px;gap:16px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line2);cursor:pointer;transition:background .14s;" style-hover="display:grid;grid-template-columns:1fr 150px 70px 160px;gap:16px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line2);cursor:pointer;background:var(--paper2);">
+              <div style="font-family:var(--serif);font-size:17px;font-weight:600;line-height:1.25;">{{ a.title }}</div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">{{ a.atype }}</div>
+              <div style="font-family:var(--mono);font-size:12px;color:var(--forest2);">{{ a.year }}</div>
+              <div style="display:flex;align-items:center;gap:7px;justify-content:flex-end;"><span style="width:7px;height:7px;border-radius:50%;background:{{ a.dot }};"></span><span style="font-family:var(--mono);font-size:10.5px;color:var(--forest2);">{{ a.access }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- SEARCH RESULTS -->
+    <sc-if value="{{ pubSearch }}" hint-placeholder-val="">
+    <div class="gp-route">
+      <section style="max-width:1000px;margin:0 auto;padding:50px 32px 70px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px;">
+          <div style="font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);">Поиск по сайту</div>
+          <button onClick="{{ clearSearch }}" style="font-family:var(--mono);font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;">очистить ×</button>
+        </div>
+        <h1 style="font-family:var(--serif);font-weight:600;font-size:38px;line-height:1.08;margin:0 0 6px;">«{{ sQuery }}»</h1>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:32px;">Найдено: {{ sCount }}</div>
+
+        <sc-if value="{{ sEmpty }}" hint-placeholder-val="">
+          <div style="padding:50px 0;text-align:center;color:var(--muted);"><div style="font-family:var(--serif);font-size:24px;color:var(--forest2);margin-bottom:6px;">Ничего не найдено</div><div style="font-size:14px;">Попробуйте другой запрос — например, «пермь», «двустворки» или «керн».</div></div>
+        </sc-if>
+
+        <sc-if value="{{ sHasMats }}" hint-placeholder-val="">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--forest2);border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:14px;">Учебные материалы</div>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:30px;">
+            <sc-for list="{{ sMats }}" as="m" hint-placeholder-count="2">
+              <div onClick="{{ m.open }}" style="display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:10px;cursor:pointer;transition:background .14s;" style-hover="display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:10px;cursor:pointer;background:var(--paper2);">
+                <span style="font-family:var(--mono);font-size:10px;font-weight:600;width:40px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:{{ m.tintBg }};color:{{ m.tintFg }};flex-shrink:0;">{{ m.typeShort }}</span>
+                <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;font-family:var(--serif);">{{ m.title }}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted);">{{ m.sub }}</div></div>
+                <span style="color:var(--clay);">→</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sHasPubs }}" hint-placeholder-val="">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--forest2);border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:14px;">Публикации</div>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:30px;">
+            <sc-for list="{{ sPubs }}" as="p" hint-placeholder-count="2">
+              <div onClick="{{ p.open }}" style="display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:10px;cursor:pointer;transition:background .14s;" style-hover="display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:10px;cursor:pointer;background:var(--paper2);">
+                <span style="font-family:var(--serif);font-size:18px;font-weight:600;color:var(--clay);width:46px;flex-shrink:0;">{{ p.year }}</span>
+                <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;font-family:var(--serif);">{{ p.title }}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted);">{{ p.sub }}</div></div>
+                <span style="color:var(--clay);">→</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sHasTopics }}" hint-placeholder-val="">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--forest2);border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:14px;">Научные темы</div>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:30px;">
+            <sc-for list="{{ sTopics }}" as="t" hint-placeholder-count="2">
+              <div onClick="{{ t.open }}" style="display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:10px;cursor:pointer;transition:background .14s;" style-hover="display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:10px;cursor:pointer;background:var(--paper2);">
+                <span style="width:40px;height:28px;border-radius:7px;background:var(--sand);flex-shrink:0;"></span>
+                <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:15px;font-family:var(--serif);">{{ t.title }}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted);">{{ t.sub }}</div></div>
+                <span style="color:var(--clay);">→</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sHasPhotos }}" hint-placeholder-val="">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--forest2);border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:14px;">Фотографии</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">
+            <sc-for list="{{ sPhotos }}" as="p" hint-placeholder-count="3">
+              <div onClick="{{ p.open }}" style="cursor:pointer;">
+                <div style="aspect-ratio:4/3;border-radius:10px;background:repeating-linear-gradient(135deg,{{ p.tint }},{{ p.tint }} 11px,rgba(255,255,255,.16) 11px,rgba(255,255,255,.16) 22px);border:1px solid var(--line);"></div>
+                <div style="font-size:12.5px;font-weight:600;margin-top:7px;font-family:var(--serif);">{{ p.title }}</div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--muted);">{{ p.sub }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- footer -->
+    <footer style="border-top:1px solid var(--line);background:var(--paper2);">
+      <div style="max-width:1180px;margin:0 auto;padding:34px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+        <div style="font-family:var(--serif);font-size:20px;font-weight:600;">Геопортал · В. В. Силантьев</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">Материалы формируются автоматически из админки · {{ hHeroMat }} материалов в открытом доступе</div>
+      </div>
+    </footer>
+  </div>
+  </sc-if>
+
+  <!-- toast -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="">
+    <div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:12px;background:var(--ink);color:#f4f1ea;padding:13px 20px;border-radius:13px;box-shadow:0 14px 40px -12px rgba(0,0,0,.5);animation:gpToast .3s both;font-size:14px;">
+      <span style="width:18px;height:18px;border-radius:50%;background:var(--clay2);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">✓</span>
+      {{ toast }}
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = {
+    theme: 'light',
+    mode: 'admin',
+    adminRoute: 'dashboard',
+    publicRoute: 'home',
+    publicDiscipline: null,
+    pubCollection: 'all',
+    pubQuery: '',
+    searchQuery: '',
+    detail: null,
+    addType: 'learning',
+    addLayout: 'split',
+    wizardStep: 0,
+    form: this.blankForm('learning'),
+    draftAt: null,
+    toast: null,
+    filter: { q: '', type: 'all', discipline: 'all', status: 'all', year: 'all' },
+    materials: this.seedMaterials(),
+    publications: this.seedPublications(),
+    photos: this.seedPhotos(),
+    topics: this.seedTopics(),
+  };
+
+  // ---------- seed data ----------
+  blankForm(type) {
+    return { type, title: '', discipline: 'Палеонтология', mtype: 'Презентация', desc: '',
+      course: 'Бакалавриат, 2 курс', year: '2026', lang: 'Русский', access: 'open',
+      status: 'draft', file: null, tags: [], tagDraft: '',
+      // publication
+      authors: 'Силантьев В. В.', journal: '', doi: '', ptype: 'Статья',
+      topic: 'Пермские отложения Среднего Поволжья', region: 'Среднее Поволжье', age: 'Пермь' };
+  }
+  seedMaterials() {
+    return [
+      { id:'m1', title:'Введение в палеонтологию беспозвоночных', discipline:'Палеонтология', mtype:'Презентация', year:'2024', status:'published', access:'open', tags:['палеонтология','беспозвоночные','лекция'], desc:'Вводный курс: систематика, методы, ключевые группы.', course:'Бакалавриат, 2 курс' },
+      { id:'m2', title:'Сингония и элементы симметрии кристаллов', discipline:'Кристаллография', mtype:'Лекция', year:'2023', status:'published', access:'open', tags:['кристаллография','симметрия'], desc:'Семь сингоний, 32 класса симметрии, примеры.', course:'Бакалавриат, 1 курс' },
+      { id:'m3', title:'Определитель неморских двустворок палеозоя', discipline:'Палеонтология', mtype:'Методичка', year:'2025', status:'draft', access:'students', tags:['двустворки','определитель','палеозой'], desc:'Иллюстрированный ключ для лабораторных занятий.', course:'Магистратура' },
+      { id:'m4', title:'Полевой определитель типов обнажений', discipline:'Полевая практика', mtype:'Методичка', year:'2024', status:'published', access:'open', tags:['полевая практика','обнажения'], desc:'Карманный справочник для летней практики.', course:'Бакалавриат, 3 курс' },
+      { id:'m5', title:'Стратиграфическая шкала карбона и перми', discipline:'Стратиграфия', mtype:'Таблица', year:'2024', status:'hidden', access:'open', tags:['стратиграфия','карбон','пермь'], desc:'Сводная корреляционная таблица региона.', course:'Магистратура' },
+      { id:'m6', title:'Анализ керна: базовый практикум', discipline:'Методы изучения керна', mtype:'Задание', year:'2025', status:'published', access:'open', tags:['керн','практикум'], desc:'10 задач с реальными колонками описания.', course:'Бакалавриат, 4 курс' },
+      { id:'m7', title:'Историческая геология: атлас руководящих форм', discipline:'Историческая геология', mtype:'Презентация', year:'2025', status:'draft', access:'open', tags:['руководящие ископаемые','атлас'], desc:'Подборка по системам палеозоя и мезозоя.', course:'Бакалавриат, 3 курс' },
+    ];
+  }
+  seedPublications() {
+    return [
+      { id:'p1', year:'2019', authors:'Силантьев В. В.', title:'Двустворчатые моллюски пермских отложений Среднего Поволжья', ptype:'Монография', journal:'Изд-во Казанского ун-та', doi:'10.1234/perm.2019', topic:'Пермские отложения Среднего Поволжья', region:'Среднее Поволжье', age:'Пермь', featured:true, access:'open' },
+      { id:'p2', year:'2021', authors:'Силантьев В. В., Снегирёва М. К.', title:'Стратиграфия визейских отложений Волго-Уральской НГП', ptype:'Статья', journal:'Стратиграфия. Геол. корреляция', doi:'10.1234/vise.2021', topic:'Визейские отложения Волго-Уральской НГП', region:'Волго-Урал', age:'Карбон', featured:true, access:'open' },
+      { id:'p3', year:'2023', authors:'Силантьев В. В.', title:'Неморские двустворки палеозоя: ревизия родов', ptype:'Статья', journal:'Палеонтологический журнал', doi:'10.1234/biv.2023', topic:'Неморские двустворчатые моллюски палеозоя', region:'Восточно-Европейская платформа', age:'Палеозой', featured:false, access:'open' },
+      { id:'p4', year:'2018', authors:'Силантьев В. В., Лебедев И. Н.', title:'Доманиковые отложения Среднего Поволжья: фации и нефтеносность', ptype:'Тезисы', journal:'Мат-лы Всеросс. совещания', doi:'', topic:'Доманиковые отложения', region:'Среднее Поволжье', age:'Девон', featured:false, access:'link' },
+      { id:'p5', year:'2024', authors:'Силантьев В. В.', title:'Историческая геология: учебное пособие', ptype:'Учебное пособие', journal:'Изд-во Казанского ун-та', doi:'10.1234/hist.2024', topic:'Геологическое образование', region:'—', age:'—', featured:true, access:'open' },
+    ];
+  }
+  seedPhotos() {
+    const t = ['#cdbfa4','#b9a98b','#c8b59a','#d2c4ac','#bcae93','#c3b29a','#cabd a0','#b6a584'];
+    return [
+      { id:'f1', title:'Экспедиция, Среднее Поволжье', year:'1987', otype:'Экспедиция', region:'Среднее Поволжье', group:'Экспедиции 1983–2026', tint:'#b9a98b' },
+      { id:'f2', title:'Обнажение пермских красноцветов', year:'2008', otype:'Обнажение', region:'р. Сок', group:'Геологические объекты', tint:'#c08a63' },
+      { id:'f3', title:'Керн скважины №14, доманик', year:'2015', otype:'Керн', region:'Волго-Урал', group:'Керн', tint:'#8f7c63' },
+      { id:'f4', title:'Раковина Palaeomutela, образец', year:'2019', otype:'Ископаемое', region:'Среднее Поволжье', group:'Палеонтологические коллекции', tint:'#cabd a0' },
+      { id:'f5', title:'Шлиф доманиковых отложений', year:'2016', otype:'Шлиф', region:'Волго-Урал', group:'Геологические объекты', tint:'#9c8a9e' },
+      { id:'f6', title:'Полевой лагерь, верховья Камы', year:'1992', otype:'Экспедиция', region:'Прикамье', group:'Экспедиции 1983–2026', tint:'#a7a182' },
+      { id:'f7', title:'Студенты на учебной практике', year:'2022', otype:'Экспедиция', region:'Жигули', group:'Учебные фотографии', tint:'#b6a07e' },
+      { id:'f8', title:'Визейский известняк, скол', year:'2011', otype:'Образец', region:'Волго-Урал', group:'Фотографии образцов', tint:'#c4b69a' },
+    ];
+  }
+  seedTopics() {
+    return [
+      { id:'t1', name:'Пермские отложения Среднего Поволжья', region:'Среднее Поволжье', age:'Пермь', desc:'Многолетние исследования разрезов, фаций и фауны пермской системы.', pubs:2, photos:3, archive:5 },
+      { id:'t2', name:'Неморские двустворчатые моллюски палеозоя', region:'Вост.-Европ. платформа', age:'Палеозой', desc:'Систематика, биостратиграфия и палеоэкология неморских Bivalvia.', pubs:2, photos:2, archive:3 },
+      { id:'t3', name:'Стратиграфия карбона и перми', region:'Волго-Урал', age:'Карбон–Пермь', desc:'Корреляция разрезов, зональные схемы, граница систем.', pubs:3, photos:1, archive:4 },
+      { id:'t4', name:'Доманиковые отложения', region:'Среднее Поволжье', age:'Девон', desc:'Фации, геохимия и нефтематеринский потенциал доманика.', pubs:2, photos:2, archive:6 },
+      { id:'t5', name:'Визейские отложения Волго-Уральской НГП', region:'Волго-Урал', age:'Карбон', desc:'Литология и нефтеносность визейского яруса.', pubs:1, photos:1, archive:2 },
+      { id:'t6', name:'Геологическое образование', region:'—', age:'—', desc:'Методики преподавания, учебные пособия, полевые практики.', pubs:1, photos:4, archive:1 },
+    ];
+  }
+
+  // ---------- meta maps ----------
+  typeShort(t){ const m={'Презентация':'ПРЗ','Лекция':'ЛЕК','Методичка':'МЕТ','Таблица':'ТАБ','Задание':'ЗАД','Фото':'ФОТ','Другое':'ДРГ'}; return m[t]||'МАТ'; }
+  typeTint(t){ const m={'Презентация':['#efe3d4','#a8744a'],'Лекция':['#e2eae0','#3a4a3f'],'Методичка':['#e9e2d3','#7d6a4a'],'Таблица':['#e3e6ec','#46566b'],'Задание':['#f0e4e0','#9c5a4a'],'Фото':['#e8e4ec','#6b5a7d']}; return m[t]||['#ece5d6','#6b6457']; }
+  statusMeta(s){ const m={ published:['Опубликовано','#e2ece2','#3a6a44'], draft:['Черновик','#f4e7d6','#a8744a'], hidden:['Скрыто','#eae6df','#8c8678'] }; return m[s]||m.draft; }
+  accessLabel(a){ const m={open:'Открыто',students:'Студентам',link:'По ссылке',request:'По запросу',hidden:'Скрыто',owner:'Только владелец'}; return m[a]||a; }
+
+  // ---------- nav / mode ----------
+  toggleTheme = () => this.setState(s=>({ theme: s.theme==='dark'?'light':'dark' }));
+  setMode(m){ this.setState({ mode:m }); }
+  setPublic = () => this.setState({ mode:'public' });
+  setAdmin = () => this.setState({ mode:'admin' });
+  goHome = () => this.setState(s=> s.mode==='public' ? {publicRoute:'home'} : {adminRoute:'dashboard'});
+  goAdmin(route){ this.setState({ adminRoute:route, mode:'admin' }); }
+  goPublic(route, disc){ this.setState({ publicRoute:route, publicDiscipline:disc||null, mode:'public' }); window.scrollTo&&window.scrollTo(0,0); }
+  goQuickAdd = () => this.setState({ mode:'admin', adminRoute:'add', wizardStep:0 });
+  goList = () => this.goAdmin('list');
+
+  // ---------- toast ----------
+  flash(msg){ this.setState({ toast:msg }); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),2600); }
+
+  // ---------- add form ----------
+  setAddType = (t) => this.setState(s=>{ const f={...s.form, type:t}; if(t==='learning'){f.mtype='Презентация';} if(t==='publication'){f.ptype='Статья';} return {addType:t, form:f, wizardStep:0}; });
+  setAddLayout = (l) => this.setState({ addLayout:l });
+  setWizard = (n) => this.setState(s=>({ wizardStep: Math.max(0, Math.min(2, n)) }));
+  upd(field, val){ this.setState(s=>({ form:{...s.form,[field]:val}, draftAt:Date.now() })); }
+  onFormInput = (e) => this.upd(e.target.name, e.target.value);
+  onDrop = (e) => { e.preventDefault(); this.setState({ dragOver:false }); const name = (e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]&&e.dataTransfer.files[0].name) || 'Лекция_палеонтология_2026.pdf'; this.autofillFromFile(name); };
+  pickFile = () => this.autofillFromFile('Презентация_двустворки_2026.pdf');
+  autofillFromFile(name){
+    const clean = name.replace(/\.[a-z0-9]+$/i,'').replace(/[_\-]+/g,' ').trim();
+    const title = clean.charAt(0).toUpperCase()+clean.slice(1);
+    let mtype = /презентац|presentation|\.ppt/i.test(name)?'Презентация': /лекц|lecture/i.test(name)?'Лекция': /метод/i.test(name)?'Методичка': /задан|task/i.test(name)?'Задание':'Презентация';
+    const guessTags=[]; if(/двуствор/i.test(name))guessTags.push('двустворки'); if(/палеонт/i.test(name))guessTags.push('палеонтология'); if(/керн/i.test(name))guessTags.push('керн');
+    this.setState(s=>({ form:{...s.form, file:name, title: s.form.title||title, mtype, tags:[...new Set([...s.form.tags,...guessTags])] }, draftAt:Date.now() }));
+    this.flash('Файл загружен — поля заполнены автоматически');
+  }
+  setDragOver = (v) => () => this.setState({ dragOver:v });
+  addTag = (t) => { const v=(t||'').trim(); if(!v) return; this.setState(s=> s.form.tags.includes(v)?{form:{...s.form,tagDraft:''}}:{ form:{...s.form, tags:[...s.form.tags,v], tagDraft:''}, draftAt:Date.now() }); };
+  onTagInput = (e) => this.setState(s=>({ form:{...s.form, tagDraft:e.target.value} }));
+  onTagKey = (e) => { if(e.key==='Enter'||e.key===','){ e.preventDefault(); this.addTag(this.state.form.tagDraft); } if(e.key==='Backspace'&&!this.state.form.tagDraft&&this.state.form.tags.length){ this.setState(s=>({form:{...s.form,tags:s.form.tags.slice(0,-1)}})); } };
+  removeTag = (t) => () => this.setState(s=>({ form:{...s.form, tags:s.form.tags.filter(x=>x!==t)} }));
+  useTagSuggestion = (t) => () => this.addTag(t);
+  useTemplate = (tpl) => () => { this.setState(s=>({ mode:'admin', adminRoute:'add', addType:tpl.type, form:{...this.blankForm(tpl.type), ...tpl.fields }, draftAt:Date.now(), wizardStep:0 })); this.flash('Шаблон применён — осталось загрузить файл'); };
+  saveDraft = () => { this.commit('draft'); };
+  publishForm = () => { this.commit('published'); };
+  commit(status){
+    const f=this.state.form;
+    if(!f.title.trim()){ this.flash('Укажите название материала'); return; }
+    if(f.type==='publication'){
+      const pub={ id:'p'+Date.now(), year:f.year, authors:f.authors, title:f.title, ptype:f.ptype, journal:f.journal, doi:f.doi, topic:f.topic, region:f.region, age:f.age, featured:false, access:f.access };
+      this.setState(s=>({ publications:[pub,...s.publications], form:this.blankForm('publication'), adminRoute:'list', draftAt:null }));
+    } else {
+      const mat={ id:'m'+Date.now(), title:f.title, discipline:f.discipline, mtype:f.mtype, year:f.year, status, access:f.access, tags:f.tags, desc:f.desc, course:f.course };
+      this.setState(s=>({ materials:[mat,...s.materials], form:this.blankForm('learning'), adminRoute:'list', draftAt:null }));
+    }
+    this.flash(status==='published'?'Опубликовано — материал уже на сайте':'Черновик сохранён');
+  }
+
+  // ---------- list / filters ----------
+  setFilter(k,v){ this.setState(s=>({ filter:{...s.filter,[k]:v} })); }
+  onSearch = (e) => this.setFilter('q', e.target.value);
+  filteredMaterials(){
+    const fl=this.state.filter; const q=fl.q.toLowerCase();
+    return this.state.materials.filter(m=>{
+      if(fl.type!=='all'&&m.mtype!==fl.type) return false;
+      if(fl.discipline!=='all'&&m.discipline!==fl.discipline) return false;
+      if(fl.status!=='all'&&m.status!==fl.status) return false;
+      if(fl.year!=='all'&&m.year!==fl.year) return false;
+      if(q&&!(m.title.toLowerCase().includes(q)||m.desc.toLowerCase().includes(q)||(m.tags||[]).join(' ').toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }
+  cycleStatus = (id) => () => this.setState(s=>({ materials:s.materials.map(m=> m.id===id?{...m, status: m.status==='published'?'hidden': m.status==='hidden'?'draft':'published'}:m) }));
+  deleteMaterial = (id) => () => { this.setState(s=>({ materials:s.materials.filter(m=>m.id!==id) })); this.flash('Материал удалён'); };
+
+  // ---------- discipline grouping (public students) ----------
+  disciplines(){ return ['Общая геология','Кристаллография','Палеонтология','Историческая геология','Стратиграфия','Методы изучения керна','Полевая практика','Региональная геология','Нефтегазовая геология']; }
+
+  // ============ RENDER ============
+  renderVals(){
+    const s=this.state;
+    const isAdmin = s.mode==='admin', isPublic = s.mode==='public';
+    const seg=(on)=>({ padding:'7px 15px', borderRadius:'8px', border:'none', cursor:'pointer', fontFamily:'var(--sans)', fontWeight:600, fontSize:'13px', background: on?'var(--paper)':'transparent', color: on?'var(--ink)':'var(--muted)', boxShadow: on?'0 1px 3px rgba(0,0,0,.08)':'none' });
+
+    // admin nav
+    const navDef=[
+      {key:'01',label:'Дашборд',route:'dashboard',count:null},
+      {key:'02',label:'Все материалы',route:'list',count:String(s.materials.length)},
+      {key:'03',label:'Добавить',route:'add',count:null},
+      {key:'04',label:'Фотоархив',route:'photos',count:String(s.photos.length)},
+      {key:'05',label:'Научные темы',route:'topics',count:String(s.topics.length)},
+    ];
+    const navItemStyle=(on)=>({ display:'flex',alignItems:'center',gap:'2px',width:'100%',padding:'10px 12px',borderRadius:'10px',border:'none',cursor:'pointer',fontFamily:'var(--sans)',fontSize:'13.5px',fontWeight: on?600:500, background: on?'var(--sand)':'transparent', color: on?'var(--ink)':'var(--forest2)' });
+    const adminNav=navDef.map(n=>({ ...n, go:()=>this.goAdmin(n.route), style:navItemStyle(s.adminRoute===n.route) }));
+
+    // stats
+    const pub=s.materials.filter(m=>m.status==='published').length;
+    const draft=s.materials.filter(m=>m.status==='draft').length;
+    const stats=[
+      {label:'Учебные',value:String(s.materials.length),sub:pub+' опубликовано',dot:'#a8744a',go:()=>this.goAdmin('list')},
+      {label:'Публикации',value:String(s.publications.length),sub:'5 тем',dot:'#3a4a3f',go:()=>this.goPublic('publications')},
+      {label:'Фотографии',value:String(s.photos.length),sub:'6 коллекций',dot:'#6b5a7d',go:()=>this.goAdmin('photos')},
+      {label:'Черновики',value:String(draft),sub:'ждут публикации',dot:'#bd8a5d',go:()=>this.goAdmin('list')},
+    ];
+
+    const recent=s.materials.slice(0,5).map(m=>{
+      const tint=this.typeTint(m.mtype), st=this.statusMeta(m.status);
+      return { ...m, typeShort:this.typeShort(m.mtype), tintBg:tint[0], tintFg:tint[1], statusLabel:st[0], stBg:st[1], stFg:st[2], meta:m.discipline+' · '+m.year, open:()=>this.goAdmin('list') };
+    });
+
+    const templates=[
+      {name:'Лекция (PDF + слайды)',kind:'учебное',use:this.useTemplate({type:'learning',fields:{mtype:'Лекция',access:'open',status:'draft'}})},
+      {name:'Презентация для семинара',kind:'учебное',use:this.useTemplate({type:'learning',fields:{mtype:'Презентация',access:'open'}})},
+      {name:'Статья в журнал',kind:'публикация',use:this.useTemplate({type:'publication',fields:{ptype:'Статья'}})},
+    ];
+
+    let savedLabel='Все изменения сохранены';
+    if(s.adminRoute==='add'){ savedLabel = s.draftAt? 'Черновик · автосохранение' : 'Новый материал'; }
+
+    return {
+      themeAttr: s.theme==='dark'?'dark':'light', toggleTheme:this.toggleTheme, themeIcon: s.theme==='dark'?'☀':'☾',
+      isAdmin, isPublic,
+      isDashboard: isAdmin&&s.adminRoute==='dashboard',
+      isAdd: isAdmin&&s.adminRoute==='add',
+      isList: isAdmin&&s.adminRoute==='list',
+      isPhotos: isAdmin&&s.adminRoute==='photos',
+      isTopics: isAdmin&&s.adminRoute==='topics',
+      setPublic:this.setPublic, setAdmin:this.setAdmin, goHome:this.goHome,
+      goQuickAdd:this.goQuickAdd, goList:this.goList,
+      tabPublicStyle:seg(isPublic), tabAdminStyle:seg(isAdmin),
+      savedLabel,
+      adminNav, stats, recent, templates,
+      totalCount: s.materials.length+s.publications.length+s.photos.length,
+      toast:s.toast,
+      ...this.addVals(),
+      ...this.listVals(),
+      ...this.photosVals(),
+      ...this.topicsVals(),
+      ...this.publicVals(),
+      ...this.detailVals(),
+      ...this.searchVals(),
+    };
+  }
+
+  addVals(){
+    const s=this.state, f=s.form, at=s.addType;
+    const isLearning=at==='learning', isPublication=at==='publication', isPhoto=at==='photo';
+    const typeTab=(on)=>({ padding:'9px 16px', borderRadius:'10px', border:'1px solid '+(on?'transparent':'var(--line)'), cursor:'pointer', fontFamily:'var(--sans)', fontWeight:600, fontSize:'13px', background:on?'var(--clay)':'var(--paper)', color:on?'#fff':'var(--forest2)' });
+    const addTypeTabs=[
+      {label:'Учебный материал',on:isLearning,t:'learning'},
+      {label:'Публикация',on:isPublication,t:'publication'},
+      {label:'Фотография',on:isPhoto,t:'photo'},
+    ].map(x=>({ label:x.label, style:typeTab(x.on), go:()=>this.setAddType(x.t) }));
+    const segS=(on)=>({ padding:'6px 12px', borderRadius:'7px', border:'none', cursor:'pointer', fontFamily:'var(--mono)', fontSize:'11px', fontWeight:600, letterSpacing:'.03em', background:on?'var(--paper)':'transparent', color:on?'var(--ink)':'var(--muted)', boxShadow:on?'0 1px 2px rgba(0,0,0,.1)':'none' });
+    const layoutTabs=[{label:'С ПРЕВЬЮ',v:'split'},{label:'ФОКУС',v:'focus'}].map(x=>({ label:x.label, style:segS(s.addLayout===x.v), go:()=>this.setAddLayout(x.v) }));
+    const showPreview=s.addLayout==='split';
+    const addWrap=showPreview?{ display:'grid', gridTemplateColumns:'minmax(0,1.4fr) minmax(0,.85fr)', gap:'26px', alignItems:'start' }:{ maxWidth:'780px', margin:'0 auto' };
+    const tint=this.typeTint(f.mtype), st=this.statusMeta(f.status);
+    const formTags=f.tags.map(t=>({ label:t, remove:this.removeTag(t) }));
+    const pool=['палеонтология','стратиграфия','двустворки','керн','пермь','карбон','полевая практика','кристаллография','лекция','определитель','доманик','визейский ярус'];
+    const tagSuggestions=pool.filter(t=>!f.tags.includes(t)).slice(0,6).map(t=>({ label:t, use:this.useTagSuggestion(t) }));
+    return {
+      f, isLearning, isPublication, isPhoto,
+      addTypeTabs, layoutTabs, addWrap, showPreview,
+      onFormInput:this.onFormInput, onTagInput:this.onTagInput, onTagKey:this.onTagKey,
+      formTags, tagSuggestions,
+      dragOver:!!s.dragOver, onDrop:this.onDrop, onDragOver:(e)=>{e.preventDefault();}, dragEnter:this.setDragOver(true), dragLeave:this.setDragOver(false), pickFile:this.pickFile,
+      hasFile:!!f.file, noFile:!f.file, fileName:f.file||'', notPublication:!isPublication,
+      dropZoneStyle: s.dragOver
+        ? { display:'flex',alignItems:'center',justifyContent:'center',minHeight:'118px',padding:'18px',border:'2px dashed var(--clay)',borderRadius:'15px',background:'var(--sand)',cursor:'pointer',transition:'all .15s',transform:'scale(1.01)' }
+        : (f.file
+          ? { display:'flex',alignItems:'center',minHeight:'78px',padding:'16px 18px',border:'1px solid var(--line)',borderRadius:'15px',background:'var(--paper)',cursor:'pointer' }
+          : { display:'flex',alignItems:'center',justifyContent:'center',minHeight:'118px',padding:'18px',border:'2px dashed var(--line)',borderRadius:'15px',background:'var(--paper2)',cursor:'pointer',transition:'all .15s' }),
+      dropTitle:isPhoto?'Перетащите фотографию':'Перетащите файл материала',
+      dropHint:isPhoto?'JPG, PNG, TIFF — превью создастся автоматически':'PDF, PPTX, DOCX, XLSX — название и тип заполнятся сами',
+      saveDraft:this.saveDraft, publishForm:this.publishForm, goBack:()=>this.goAdmin('dashboard'),
+      pvTypeShort:this.typeShort(f.mtype), pvTintBg:tint[0], pvTintFg:tint[1],
+      pvStatusLabel:st[0], pvStBg:st[1], pvStFg:st[2],
+      pvTitle:f.title||'Название материала', pvDisc:f.discipline, pvYear:f.year,
+      pvDesc:f.desc||'Краткое описание появится здесь по мере заполнения.',
+      pvAccess:this.accessLabel(f.access),
+      pvAuthors:f.authors||'Авторы', pvJournal:f.journal||'Журнал / издательство', pvPtype:f.ptype,
+      hasDesc:!!f.desc, hasTags:f.tags.length>0,
+    };
+  }
+
+  listVals(){
+    const s=this.state, fl=s.filter;
+    const rows=this.filteredMaterials().map(m=>{
+      const tint=this.typeTint(m.mtype), st=this.statusMeta(m.status);
+      return { id:m.id, title:m.title, discipline:m.discipline, year:m.year, mtype:m.mtype,
+        typeShort:this.typeShort(m.mtype), tintBg:tint[0], tintFg:tint[1],
+        statusLabel:st[0], stBg:st[1], stFg:st[2], accessLabel:this.accessLabel(m.access),
+        tagStr:(m.tags||[]).slice(0,4).join(' · '),
+        cycle:this.cycleStatus(m.id), del:this.deleteMaterial(m.id), edit:()=>this.flash('Открыт редактор карточки (в полной версии)') };
+    });
+    const mkSel=(field,opts)=>({ value:fl[field], onChange:(e)=>this.setFilter(field,e.target.value), opts });
+    const active = fl.type!=='all'||fl.discipline!=='all'||fl.status!=='all'||fl.year!=='all'||fl.q;
+    return {
+      listRows:rows, listCount:rows.length, hasRows:rows.length>0, noRows:rows.length===0, totalMat:s.materials.length,
+      lq:fl.q, onSearch:this.onSearch,
+      ftype:fl.type, fdisc:fl.discipline, fstatus:fl.status, fyear:fl.year,
+      onFType:(e)=>this.setFilter('type',e.target.value), onFDisc:(e)=>this.setFilter('discipline',e.target.value),
+      onFStatus:(e)=>this.setFilter('status',e.target.value), onFYear:(e)=>this.setFilter('year',e.target.value),
+      filterActive:!!active, resetFilter:()=>this.setState({filter:{q:'',type:'all',discipline:'all',status:'all',year:'all'}}),
+    };
+  }
+
+  photosVals(){
+    const s=this.state;
+    const groups=['Экспедиции 1983–2026','Геологические объекты','Фотографии образцов','Керн','Палеонтологические коллекции','Учебные фотографии'];
+    const byGroup=groups.map(g=>({ name:g, count:s.photos.filter(p=>p.group===g).length })).filter(x=>x.count>0);
+    const cards=s.photos.map(p=>({ ...p, open:()=>this.flash('Карточка фото — в полной версии') }));
+    return { photoCards:cards, photoGroups:byGroup, photoCount:s.photos.length,
+      onPhotoDrop:(e)=>{e.preventDefault();this.setState({photoDrag:false});this.flash('Фото добавлены в очередь — заполните подписи');},
+      photoDragOver:(e)=>{e.preventDefault();}, photoDrag:!!s.photoDrag,
+      photoDropStyle: s.photoDrag
+        ? { padding:'34px 20px', border:'2px dashed var(--clay)', borderRadius:'16px', background:'var(--sand)', cursor:'pointer', transform:'scale(1.005)' }
+        : { padding:'34px 20px', border:'2px dashed var(--line)', borderRadius:'16px', background:'var(--paper2)', cursor:'pointer' },
+      photoEnter:()=>this.setState({photoDrag:true}), photoLeave:()=>this.setState({photoDrag:false}),
+      addPhotoCta:()=>{ this.setState({addType:'photo'}); this.goQuickAdd(); } };
+  }
+
+  topicsVals(){
+    const s=this.state;
+    const cards=s.topics.map(t=>({ ...t, total:t.pubs+t.photos+t.archive, open:()=>this.goPublic('research') }));
+    return { topicCards:cards, topicCount:s.topics.length, newTopic:()=>this.flash('Конструктор темы — в полной версии') };
+  }
+
+  setPubColl = (c) => () => this.setState({ pubCollection:c });
+  onPubSearch = (e) => this.setState({ pubQuery:e.target.value });
+  openDetail = (kind, item) => () => { this.setState({ detail:{ kind, item } }); };
+  closeDetail = () => this.setState({ detail:null });
+  onGlobalSearch = (e) => { const q=e.target.value; this.setState(s=>({ searchQuery:q, publicRoute: q.trim()? 'search' : (s.publicRoute==='search'?'home':s.publicRoute) })); };
+  clearSearch = () => this.setState({ searchQuery:'', publicRoute:'home' });
+
+  detailVals(){
+    const d=this.state.detail;
+    if(!d) return { detailOpen:false };
+    const { kind, item }=d;
+    const base={ detailOpen:true, closeDetail:this.closeDetail, dKind:kind,
+      isDMat:kind==='mat', isDPub:kind==='pub', isDPhoto:kind==='photo', isDTopic:kind==='topic' };
+    if(kind==='mat'){
+      const t=this.typeTint(item.mtype);
+      const rel=this.state.materials.filter(m=>m.discipline===item.discipline&&m.id!==item.id&&m.status==='published').slice(0,3)
+        .map(m=>({ id:m.id, title:m.title, mtype:m.mtype, typeShort:this.typeShort(m.mtype), year:m.year, open:this.openDetail('mat',m) }));
+      return { ...base, dTitle:item.title, dType:item.mtype, dTypeShort:this.typeShort(item.mtype), dTint:t[0], dTintFg:t[1],
+        dDisc:item.discipline, dYear:item.year, dCourse:item.course||'—', dDesc:item.desc||'Описание материала.',
+        dAccess:this.accessLabel(item.access), dTags:(item.tags||[]), dRelMats:rel, dHasRel:rel.length>0,
+        dDownload:()=>this.flash('Скачивание: '+item.title) };
+    }
+    if(kind==='pub'){
+      const rel=this.state.publications.filter(p=>p.topic===item.topic&&p.id!==item.id).slice(0,3)
+        .map(p=>({ id:p.id, title:p.title, year:p.year, ptype:p.ptype, open:this.openDetail('pub',p) }));
+      const abstract='Работа посвящена теме «'+item.topic+'». Рассматриваются материалы по региону «'+item.region+'» (геологический возраст: '+item.age+'). Полный текст доступен по DOI или ссылке издателя.';
+      return { ...base, dTitle:item.title, dAuthors:item.authors, dYear:item.year, dPtype:item.ptype, dJournal:item.journal,
+        dDoi:item.doi||'—', dHasDoi:!!item.doi, dTopic:item.topic, dRegion:item.region, dAge:item.age, dAbstract:abstract,
+        dAccessP:this.accessLabel(item.access), dRelPubs:rel, dHasRelP:rel.length>0,
+        dOpenDoi:()=>this.flash(item.doi? 'Открываю DOI: '+item.doi : 'Переход к публикации') };
+    }
+    if(kind==='photo'){
+      const rel=this.state.photos.filter(p=>p.group===item.group&&p.id!==item.id).slice(0,4)
+        .map(p=>({ id:p.id, title:p.title, tint:p.tint, year:p.year, open:this.openDetail('photo',p) }));
+      return { ...base, dTitle:item.title, dTint:item.tint, dOtype:item.otype, dRegion:item.region, dYear:item.year,
+        dGroup:item.group, dPhotoDesc:item.desc||'Снимок из фотоархива экспедиций.', dRelPhotos:rel, dHasRelPh:rel.length>0,
+        dPhotoAuthor:'В. В. Силантьев', dDownloadPh:()=>this.flash('Скачивание фотографии') };
+    }
+    // topic
+    const kw=item.name.toLowerCase();
+    const tPubs=this.state.publications.filter(p=>p.topic===item.name)
+      .map(p=>({ id:p.id, title:p.title, year:p.year, ptype:p.ptype, open:this.openDetail('pub',p) }));
+    const tPhotos=this.state.photos.filter(p=> (item.region&&p.region&&(p.region.split(' ')[0]===item.region.split(' ')[0])) || (item.age&&p.region&&false) ).slice(0,4)
+      .map(p=>({ id:p.id, title:p.title, tint:p.tint, year:p.year, open:this.openDetail('photo',p) }));
+    const tPhotosFinal = tPhotos.length? tPhotos : this.state.photos.slice(0,4).map(p=>({ id:p.id, title:p.title, tint:p.tint, year:p.year, open:this.openDetail('photo',p) }));
+    const tMats=this.state.materials.filter(m=>m.status==='published'&&((m.tags||[]).some(tg=>kw.includes(tg.toLowerCase())||tg.toLowerCase().includes(kw.split(' ')[0]))))
+      .map(m=>({ id:m.id, title:m.title, mtype:m.mtype, typeShort:this.typeShort(m.mtype), year:m.year, open:this.openDetail('mat',m) }));
+    return { ...base, dTitle:item.name, dTopicDesc:item.desc, dRegion:item.region, dAge:item.age,
+      dTopicPubs:tPubs, dHasTPubs:tPubs.length>0, dTopicPhotos:tPhotosFinal, dHasTPhotos:tPhotosFinal.length>0,
+      dTopicMats:tMats, dHasTMats:tMats.length>0 };
+  }
+
+  searchVals(){
+    const q=(this.state.searchQuery||'').toLowerCase().trim();
+    if(!q) return { sActive:false, sCount:0 };
+    const onlyPub=m=>m.status==='published'&&m.access!=='hidden'&&m.access!=='owner';
+    const sMats=this.state.materials.filter(onlyPub).filter(m=>(m.title+' '+m.desc+' '+m.discipline+' '+(m.tags||[]).join(' ')).toLowerCase().includes(q))
+      .map(m=>{const t=this.typeTint(m.mtype);return { id:m.id, title:m.title, sub:m.discipline+' · '+m.year, typeShort:this.typeShort(m.mtype), tintBg:t[0], tintFg:t[1], open:this.openDetail('mat',m) };});
+    const sPubs=this.state.publications.filter(p=>(p.title+' '+p.authors+' '+p.journal+' '+p.topic+' '+p.region+' '+p.age).toLowerCase().includes(q))
+      .map(p=>({ id:p.id, title:p.title, sub:p.authors+' · '+p.year, year:p.year, open:this.openDetail('pub',p) }));
+    const sPhotos=this.state.photos.filter(p=>(p.title+' '+p.region+' '+p.otype).toLowerCase().includes(q))
+      .map(p=>({ id:p.id, title:p.title, tint:p.tint, sub:p.otype+' · '+p.year, open:this.openDetail('photo',p) }));
+    const sTopics=this.state.topics.filter(t=>(t.name+' '+t.desc+' '+t.region+' '+t.age).toLowerCase().includes(q))
+      .map(t=>({ id:t.id, title:t.name, sub:t.region+' · '+t.age, open:this.openDetail('topic',t) }));
+    const sCount=sMats.length+sPubs.length+sPhotos.length+sTopics.length;
+    return { sActive:true, sQuery:this.state.searchQuery, sMats, sPubs, sPhotos, sTopics, sCount,
+      sHasMats:sMats.length>0, sHasPubs:sPubs.length>0, sHasPhotos:sPhotos.length>0, sHasTopics:sTopics.length>0, sEmpty:sCount===0 };
+  }
+
+  publicVals(){
+    const s=this.state, r=s.publicRoute;
+    const pubNav=[['home','Главная'],['about','Обо мне'],['students','Студентам'],['research','Научная работа'],['publications','Публикации'],['photos','Фотоархив'],['archive','Архив']]
+      .map(([k,l])=>({ key:k, label:l, go:()=>this.goPublic(k),
+        style:{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--sans)', fontSize:'13.5px', fontWeight: r===k?600:500, color: r===k?'var(--clay)':'var(--forest2)', padding:'6px 2px', borderBottom: r===k?'2px solid var(--clay)':'2px solid transparent' } }));
+
+    const onlyPublic = m => m.status==='published' && m.access!=='hidden' && m.access!=='owner';
+    const pubMaterials = s.materials.filter(onlyPublic);
+    const matCard = m => { const t=this.typeTint(m.mtype); return { id:m.id, title:m.title, discipline:m.discipline, year:m.year, desc:m.desc, mtype:m.mtype, typeShort:this.typeShort(m.mtype), tintBg:t[0], tintFg:t[1], access:this.accessLabel(m.access), tags:(m.tags||[]).slice(0,3).join(' · '), open:this.openDetail('mat',m) }; };
+
+    const discCounts = this.disciplines().map(d=>({ name:d, count:pubMaterials.filter(m=>m.discipline===d).length, go:()=>this.goPublic('students', d) })).filter(x=>x.count>0);
+    const featuredPubs = s.publications.filter(p=>p.featured).map(p=>({ ...p, open:this.openDetail('pub',p) }));
+    const homePhotos = s.photos.slice(0,6).map(p=>({ ...p, open:this.openDetail('photo',p) }));
+    const homeTopics = s.topics.slice(0,3).map(t=>({ ...t, open:this.openDetail('topic',t) }));
+    const latestMaterials = pubMaterials.slice(0,3).map(matCard);
+
+    // students drill-down
+    const selDisc = s.publicDiscipline;
+    const order=['Лекция','Презентация','Методичка','Таблица','Задание','Фото','Другое'];
+    const discMats = selDisc? pubMaterials.filter(m=>m.discipline===selDisc):[];
+    const discGroups = order.map(tp=>({ type:tp, items:discMats.filter(m=>m.mtype===tp).map(matCard) })).filter(g=>g.items.length>0);
+
+    // publications page
+    const coll=s.pubCollection;
+    const collDefs=[['all','Все'],['featured','Избранные'],['Монография','Монографии'],['Статья','Статьи'],['bivalve','По двустворкам'],['perm','Пермские отложения']];
+    const collChips=collDefs.map(([k,l])=>({ label:l, active:coll===k,
+      style:{ padding:'7px 14px', borderRadius:'20px', cursor:'pointer', fontSize:'12.5px', fontWeight:500, border:'1px solid '+(coll===k?'var(--clay)':'var(--line)'), background:coll===k?'var(--clay)':'var(--paper)', color:coll===k?'#fff':'var(--forest2)' },
+      go:this.setPubColl(k) }));
+    let pl=s.publications.slice();
+    if(coll==='featured')pl=pl.filter(p=>p.featured);
+    else if(coll==='Монография'||coll==='Статья')pl=pl.filter(p=>p.ptype===coll);
+    else if(coll==='bivalve')pl=pl.filter(p=>/двуствор/i.test(p.title+p.topic));
+    else if(coll==='perm')pl=pl.filter(p=>/перм/i.test(p.title+p.topic+p.age));
+    const pq=(s.pubQuery||'').toLowerCase().trim();
+    if(pq)pl=pl.filter(p=>(p.title+' '+p.authors+' '+p.journal+' '+p.topic+' '+p.region+' '+p.age).toLowerCase().includes(pq));
+    pl.sort((a,b)=>b.year.localeCompare(a.year));
+    const pubList=pl.map(p=>({ ...p, open:this.openDetail('pub',p) }));
+
+    // photos page
+    const pGroups=['Экспедиции 1983–2026','Геологические объекты','Фотографии образцов','Керн','Палеонтологические коллекции','Учебные фотографии'];
+    const pubPhotoGroups=pGroups.map(g=>({ name:g, count:s.photos.filter(p=>p.group===g).length })).filter(x=>x.count>0);
+    const pubPhotoCards=s.photos.map(p=>({ ...p, open:this.openDetail('photo',p) }));
+
+    // research
+    const pubTopics=s.topics.map(t=>({ ...t, total:t.pubs+t.photos+t.archive, open:this.openDetail('topic',t) }));
+
+    // archive
+    const archiveItems=[
+      { title:'Полевой дневник, экспедиция 1987 г.', atype:'Полевой дневник', year:'1987', region:'Среднее Поволжье', access:'Доступ по ссылке', dot:'#c2643a' },
+      { title:'Корреляционная схема пермских разрезов', atype:'Схема', year:'2004', region:'Волго-Урал', access:'Открыто', dot:'#3f7a4f' },
+      { title:'Таблица замеров мощностей доманика', atype:'Таблица', year:'2012', region:'Среднее Поволжье', access:'По запросу', dot:'#9c7a3a' },
+      { title:'Рукопись: ревизия рода Palaeomutela', atype:'Текст', year:'2016', region:'—', access:'Только для студентов', dot:'#46566b' },
+      { title:'Сканы полевых карт, Прикамье', atype:'Скан', year:'1992', region:'Прикамье', access:'Доступ по ссылке', dot:'#c2643a' },
+      { title:'Фотопластинки шлифов (оцифровка)', atype:'Фото', year:'2015', region:'Волго-Урал', access:'Открыто', dot:'#3f7a4f' },
+    ].map(a=>({ ...a, open:()=>this.flash('Запрос доступа к архивному материалу') }));
+
+    return {
+      publicReady:true,
+      pubNav,
+      pubHome:r==='home', pubAbout:r==='about', pubStudents:r==='students', pubResearch:r==='research',
+      pubPublications:r==='publications', pubPhotos:r==='photos', pubArchive:r==='archive', pubSearch:r==='search',
+      searchQuery:s.searchQuery, onGlobalSearch:this.onGlobalSearch, clearSearch:this.clearSearch, hasGlobalQ:!!s.searchQuery,
+      hHeroMat:String(pubMaterials.length), hHeroPub:String(s.publications.length), hHeroPhoto:String(s.photos.length), hHeroYears:'40+',
+      featuredPubs, homeDiscs:discCounts, homePhotos, homeTopics, latestMaterials,
+      studentDiscs:discCounts, selDisc, hasSelDisc:!!selDisc, noSelDisc:!selDisc, discGroups, discCount:discMats.length,
+      backToDiscs:()=>this.goPublic('students'),
+      collChips, pubList, pubListCount:pubList.length, pubQuery:s.pubQuery, onPubSearch:this.onPubSearch,
+      pubPhotoGroups, pubPhotoCards,
+      pubTopics, archiveItems,
+      goPublicHome:()=>this.goPublic('home'),
+      goStudents:()=>this.goPublic('students'),
+      goPubsPage:()=>this.goPublic('publications'),
+      goPhotosPage:()=>this.goPublic('photos'),
+    };
+  }
+}
+</script>
+</body>
+</html>

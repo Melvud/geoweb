@@ -1,0 +1,21 @@
+"use client";
+
+import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+
+// Лёгкий трекер просмотров публичных страниц (без cookie/IP).
+export function PageViewTracker() {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!pathname) return;
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: pathname }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [pathname]);
+
+  return null;
+}

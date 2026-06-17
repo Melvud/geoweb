@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: geoweb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: geoweb
+      POSTGRES_USER: geoweb
+      POSTGRES_PASSWORD: geoweb
+    ports:
+      - "5432:5432"
+    volumes:
+      - geoweb-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geoweb -d geoweb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  geoweb-postgres-data:
