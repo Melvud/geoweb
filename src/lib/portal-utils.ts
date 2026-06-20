@@ -413,6 +413,15 @@ export function parseMarkdown(md: string): string {
         (caption ? `<figcaption class="markdown-figcaption">${caption}</figcaption>` : "") +
         `</figure>`
       );
+
+      // Старый визуальный редактор сохранял подпись ещё и отдельным абзацем:
+      // ![Подпись](image.jpg)\n\nПодпись. Не показываем такой служебный дубль.
+      if (caption) {
+        const nextLine = lines[i + 1]?.trim();
+        const lineAfterBlank = lines[i + 2]?.trim();
+        if (nextLine === caption) i += 1;
+        else if (nextLine === "" && lineAfterBlank === caption) i += 2;
+      }
       continue;
     }
 

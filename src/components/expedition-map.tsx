@@ -1,6 +1,8 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
+import "maplibre-gl/dist/maplibre-gl.css";
+import "@maplibre/maplibre-gl-leaflet";
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 import type { MapPlace } from "@/lib/portal-types";
@@ -12,6 +14,9 @@ type Props = {
   editable?: boolean;
   draft?: { lat: number; lng: number } | null;
   onPick?: (lat: number, lng: number) => void;
+  geologyEnabled?: boolean;
+  geologySelection?: { lat: number; lng: number } | null;
+  onGeologyPick?: (lat: number, lng: number) => void;
   height?: number | string;
 };
 
@@ -26,16 +31,25 @@ export function ExpeditionMap({
   editable = false,
   draft = null,
   onPick,
+  geologyEnabled = false,
+  geologySelection = null,
+  onGeologyPick,
   height = 460,
 }: Props) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const draftRef = useRef<L.Marker | null>(null);
+  const geologyLayerRef = useRef<L.TileLayer | null>(null);
+  const geologySelectionRef = useRef<L.CircleMarker | null>(null);
   const onSelectRef = useRef(onSelect);
   const onPickRef = useRef(onPick);
+  const onGeologyPickRef = useRef(onGeologyPick);
+  const geologyEnabledRef = useRef(geologyEnabled);
   onSelectRef.current = onSelect;
   onPickRef.current = onPick;
+  onGeologyPickRef.current = onGeologyPick;
+  geologyEnabledRef.current = geologyEnabled;
 
   // Инициализация карты (один раз)
   useEffect(() => {
@@ -52,33 +66,88 @@ export function ExpeditionMap({
     // Убираем стандартный префикс Leaflet (там флаг) — оставляем только нейтральный кредит тайлов
     map.attributionControl.setPrefix(false);
 
-    // Атласный стиль National Geographic: рельеф, границы и подписи городов.
-    // Зум ограничен 11 — на этом уровне у NatGeo есть глобальное покрытие тайлами.
-    L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
-      {
-        maxNativeZoom: 11,
-        maxZoom: 11,
-        attribution: "&copy; Esri, National Geographic",
-      },
-    ).addTo(map);
+    // Векторный стиль OpenFreeMap позволяет убрать границы отдельными слоями,
+    // сохранив дороги, города, рельеф и гидрографию.
+    const baseLayer = L.maplibreGL({
+      style: "https://tiles.openfreemap.org/styles/liberty",
+      attributionControl: false,
+    }).addTo(map);
 
-    if (editable) {
-      map.on("click", (event: L.LeafletMouseEvent) => {
-        onPickRef.current?.(event.latlng.lat, event.latlng.lng);
+    const vectorMap = baseLayer.getMaplibreMap();
+    vectorMap.on("style.load", () => {
+      ["boundary_3", "boundary_2", "boundary_disputed"].forEach((layerId) => {
+        if (vectorMap.getLayer(layerId)) vectorMap.removeLayer(layerId);
       });
-    }
+    });
+
+    map.attributionControl.addAttribution(
+      '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
+    );
+
+    map.createPane("geology-pane");
+    const geologyPane = map.getPane("geology-pane");
+    if (geologyPane) geologyPane.style.zIndex = "450";
+
+    map.on("click", (event: L.LeafletMouseEvent) => {
+      if (editable) {
+        onPickRef.current?.(event.latlng.lat, event.latlng.lng);
+      } else if (geologyEnabledRef.current) {
+        onGeologyPickRef.current?.(event.latlng.lat, event.latlng.lng);
+      }
+    });
 
     mapRef.current = map;
     // Корректный размер после монтирования в гриде
-    setTimeout(() => map.invalidateSize(), 80);
+    const resizeTimer = window.setTimeout(() => {
+      if (mapRef.current === map && map.getContainer().isConnected && map.getPane("mapPane")) {
+        map.invalidateSize({ pan: false });
+      }
+    }, 80);
 
     return () => {
+      window.clearTimeout(resizeTimer);
       map.remove();
-      mapRef.current = null;
+      if (mapRef.current === map) mapRef.current = null;
+      geologyLayerRef.current = null;
       markersRef.current.clear();
     };
   }, [editable]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (geologyEnabled && !geologyLayerRef.current) {
+      geologyLayerRef.current = L.tileLayer("https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png", {
+        pane: "geology-pane",
+        opacity: 0.7,
+        maxZoom: 11,
+        attribution: 'Geology: <a href="https://macrostrat.org/" target="_blank" rel="noopener noreferrer">Macrostrat</a>',
+      }).addTo(map);
+    } else if (!geologyEnabled && geologyLayerRef.current) {
+      geologyLayerRef.current.remove();
+      geologyLayerRef.current = null;
+    }
+  }, [geologyEnabled]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    geologySelectionRef.current?.remove();
+    geologySelectionRef.current = null;
+
+    if (geologyEnabled && geologySelection) {
+      geologySelectionRef.current = L.circleMarker([geologySelection.lat, geologySelection.lng], {
+        pane: "markerPane",
+        radius: 7,
+        color: "#fff",
+        weight: 3,
+        fillColor: "#536171",
+        fillOpacity: 1,
+        interactive: false,
+      }).addTo(map);
+    }
+  }, [geologyEnabled, geologySelection?.lat, geologySelection?.lng]);
 
   // Маркеры мест
   useEffect(() => {
@@ -173,7 +242,7 @@ export function ExpeditionMap({
   return (
     <div
       ref={elRef}
-      className="exp-map"
+      className={`exp-map${geologyEnabled ? " geology-active" : ""}`}
       style={{ height, width: "100%", borderRadius: 16, overflow: "hidden", border: "1px solid var(--line)" }}
     />
   );

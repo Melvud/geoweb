@@ -15,7 +15,15 @@ export function PublicResearchView() {
       <EditableText as="h1" id="research.title" className="page-title" style={{ marginBottom: 12 }} />
       <EditableText as="p" id="research.subtitle" className="page-copy" multiline style={{ margin: "0 0 36px", maxWidth: 580 }} />
       <div className="topics-grid">
-        {topics.map((item) => (
+        {topics.map((item) => {
+          const pubsCount = state.publications.filter(p => (item.relatedPublicationIds?.includes(p.id) || p.relatedTopicIds?.includes(item.id) || p.topic === item.name) && isListedPublic(p.access)).length;
+          const photosCount = state.photos.filter(p => (item.relatedPhotoIds?.includes(p.id) || p.group === item.name) && isListedPublic(p.access)).length;
+          const archiveCount = state.archiveItems.filter(p => (item.relatedArchiveIds?.includes(p.id) || p.relatedTopicIds?.includes(item.id) || p.topic === item.name) && isListedPublic(p.access)).length;
+          const materialsCount = state.materials.filter(m => m.relatedTopicIds?.includes(item.id) && isListedPublic(m.access)).length;
+          const libraryCount = state.libraryItems.filter(m => m.relatedTopicIds?.includes(item.id) && isListedPublic(m.access)).length;
+          const mapPlacesCount = state.mapPlaces.filter(m => m.relatedTopicIds?.includes(item.id)).length;
+
+          return (
           <Link
             key={item.id}
             href={`/research/${item.id}`}
@@ -49,11 +57,16 @@ export function PublicResearchView() {
             >
               {item.desc}
             </p>
-            <div className="mono" style={{ fontSize: 11, color: "var(--clay)", marginTop: "auto" }}>
-              {item.pubs} публ. · {item.photos} фото · {item.archive} архив
+            <div className="mono" style={{ fontSize: 11, color: "var(--clay)", marginTop: "auto", display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+              {pubsCount > 0 && <span>{pubsCount} публ.</span>}
+              {photosCount > 0 && <span>{photosCount} фото</span>}
+              {archiveCount > 0 && <span>{archiveCount} архив</span>}
+              {materialsCount > 0 && <span>{materialsCount} учеб.</span>}
+              {libraryCount > 0 && <span>{libraryCount} библ.</span>}
+              {mapPlacesCount > 0 && <span>{mapPlacesCount} карт.</span>}
             </div>
           </Link>
-        ))}
+        )})}
       </div>
     </section>
   );

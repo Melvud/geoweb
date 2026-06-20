@@ -8,6 +8,7 @@ import { useMarkdownEffects } from "@/lib/use-markdown-effects";
 import { PdfEmbed } from "@/components/pdf-embed";
 import { RequestAccess } from "@/components/request-access";
 import type { DetailState } from "@/lib/portal-types";
+import { usePortal } from "@/components/portal-provider";
 
 function mainFilePath(detail: DetailState): string | null {
   if (!detail) return null;
@@ -45,11 +46,18 @@ export function PortalDetailModal({
   detail: DetailState;
   onClose: () => void;
 }) {
+  const { state } = usePortal();
   useMarkdownEffects(detail);
 
   if (!detail) {
     return null;
   }
+
+  const relatedTopicIds = "relatedTopicIds" in detail.item ? detail.item.relatedTopicIds ?? [] : [];
+  const relatedTopicNames = state.topics
+    .filter((topic) => relatedTopicIds.includes(topic.id))
+    .map((topic) => topic.name)
+    .join(", ");
 
   return (
     <div className="detail-backdrop" onClick={onClose}>
@@ -189,6 +197,9 @@ export function PortalDetailModal({
               Метаданные
             </div>
             <div style={{ display: "grid", gap: 12 }}>
+              {detail.kind !== "topic" && relatedTopicNames ? (
+                <MetaRow label="Научные темы" value={relatedTopicNames} />
+              ) : null}
               {detail.kind === "mat" ? (
                 <Fragment>
                   <MetaRow label="Тип" value={detail.item.mtype} />
@@ -202,6 +213,8 @@ export function PortalDetailModal({
                   <MetaRow label="Тип" value={detail.item.ptype} />
                   <MetaRow label="Журнал" value={detail.item.journal} />
                   <MetaRow label="Регион" value={detail.item.region} />
+                  <MetaRow label="Возраст" value={detail.item.age} />
+                  <MetaRow label="DOI" value={detail.item.doi} />
                 </Fragment>
               ) : null}
               {detail.kind === "photo" ? (

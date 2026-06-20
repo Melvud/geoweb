@@ -6,8 +6,12 @@ export type HomePageContent = {
   heroImageCaption: string;
   statsYears: string;
   featuredTitle: string;
+  topicsTitle: string;
   disciplinesTitle: string;
   photosTitle: string;
+  featuredPublicationIds: string[] | null;
+  featuredTopicIds: string[] | null;
+  featuredPhotoIds: string[] | null;
 };
 
 export type AboutPageContent = {
@@ -34,8 +38,12 @@ export function defaultHomePageContent(): HomePageContent {
     heroImageCaption: "портрет · фото профессора",
     statsYears: "40+",
     featuredTitle: "Избранные публикации",
+    topicsTitle: "Избранные научные темы",
     disciplinesTitle: "Студентам — по дисциплинам",
     photosTitle: "Из фотоархива",
+    featuredPublicationIds: null,
+    featuredTopicIds: null,
+    featuredPhotoIds: null,
   };
 }
 

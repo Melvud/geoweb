@@ -5,12 +5,17 @@ import type {
   AboutPageContent,
   HomePageContent,
 } from "@/lib/page-content";
+import type { Photo, Publication, Topic } from "@/lib/portal-types";
+import { HomepageFeaturedSelector } from "@/components/homepage-featured-selector";
 
 export function PortalPagesEditor({
   home,
   about,
   onSavePage,
   onUploadFile,
+  publications,
+  topics,
+  photos,
 }: {
   home: HomePageContent;
   about: AboutPageContent;
@@ -19,6 +24,9 @@ export function PortalPagesEditor({
     payload: HomePageContent | AboutPageContent,
   ) => Promise<void>;
   onUploadFile: (file: File) => Promise<{ path: string }>;
+  publications: Publication[];
+  topics: Topic[];
+  photos: Photo[];
 }) {
   const [homeDraft, setHomeDraft] = useState(home);
   const [aboutDraft, setAboutDraft] = useState(about);
@@ -136,7 +144,7 @@ export function PortalPagesEditor({
           </div>
         </div>
 
-        <div className="form-grid-three">
+        <div className="form-grid" style={{ marginBottom: 16 }}>
           <div>
             <label className="field-label">Стаж в поле</label>
             <input
@@ -154,6 +162,16 @@ export function PortalPagesEditor({
               value={homeDraft.featuredTitle}
               onChange={(event) =>
                 setHomeDraft((current) => ({ ...current, featuredTitle: event.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="field-label">Заголовок научных тем</label>
+            <input
+              className="text-input"
+              value={homeDraft.topicsTitle}
+              onChange={(event) =>
+                setHomeDraft((current) => ({ ...current, topicsTitle: event.target.value }))
               }
             />
           </div>
@@ -180,6 +198,35 @@ export function PortalPagesEditor({
             onChange={(event) =>
               setHomeDraft((current) => ({ ...current, photosTitle: event.target.value }))
             }
+          />
+        </div>
+
+        <div className="home-featured-manager">
+          <div className="home-featured-manager-title">
+            <div className="section-kicker">Состав главной страницы</div>
+            <h3>Избранные материалы</h3>
+            <p>Выберите материалы и расположите их в нужном порядке. Изменения появятся после сохранения страницы.</p>
+          </div>
+          <HomepageFeaturedSelector
+            title="Публикации"
+            description="Карточки в блоке «Избранные публикации»."
+            items={publications.map((item) => ({ id: item.id, title: item.title, meta: `${item.year} · ${item.ptype} · ${item.authors}` }))}
+            selected={homeDraft.featuredPublicationIds ?? publications.filter((item) => item.featured).map((item) => item.id)}
+            onChange={(featuredPublicationIds) => setHomeDraft((current) => ({ ...current, featuredPublicationIds }))}
+          />
+          <HomepageFeaturedSelector
+            title="Научные темы"
+            description="Отдельный блок тем на главной странице."
+            items={topics.map((item) => ({ id: item.id, title: item.name, meta: [item.age, item.region].filter(Boolean).join(" · "), imagePath: item.coverPath }))}
+            selected={homeDraft.featuredTopicIds ?? []}
+            onChange={(featuredTopicIds) => setHomeDraft((current) => ({ ...current, featuredTopicIds }))}
+          />
+          <HomepageFeaturedSelector
+            title="Фотографии"
+            description="Фотографии из блока «Из фотоархива»."
+            items={photos.map((item) => ({ id: item.id, title: item.title, meta: [item.year, item.group, item.location].filter(Boolean).join(" · "), imagePath: item.imagePath }))}
+            selected={homeDraft.featuredPhotoIds ?? photos.slice(0, 6).map((item) => item.id)}
+            onChange={(featuredPhotoIds) => setHomeDraft((current) => ({ ...current, featuredPhotoIds }))}
           />
         </div>
       </div>

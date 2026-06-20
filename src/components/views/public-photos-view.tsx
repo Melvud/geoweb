@@ -83,8 +83,8 @@ export function PublicPhotosView() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {allGroups.map((group) => {
             const count = group === "Все" 
-              ? state.photos.length 
-              : state.photos.filter((p) => p.group === group).length;
+              ? publicPhotos.length
+              : publicPhotos.filter((p) => p.group === group).length;
             return (
               <button
                 key={group}
@@ -146,7 +146,7 @@ export function PublicPhotosView() {
               Все темы
             </button>
             {state.topics.map((topic) => {
-              const topicPhotos = state.photos.filter((p) => p.relatedTopicIds?.includes(topic.id));
+              const topicPhotos = publicPhotos.filter((p) => p.relatedTopicIds?.includes(topic.id));
               if (topicPhotos.length === 0) return null; // Only show topics that have photos
 
               return (

@@ -26,6 +26,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.3",
     "@tiptap/extension-image": "^3.26.1",
     "@tiptap/extension-placeholder": "^3.26.1",
     "@tiptap/extension-table": "^3.26.1",
@@ -38,6 +39,7 @@
     "better-sqlite3": "^12.11.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.20.0",
+    "maplibre-gl": "^5.24.0",
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

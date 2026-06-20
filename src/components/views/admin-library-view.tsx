@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePortal } from "@/components/portal-provider";
 import { FilePicker } from "@/components/file-picker";
-import { Search, Pencil, X, BookOpen, Folder } from "lucide-react";
+import { MarkdownEditor } from "@/components/portal-markdown-editor";
+import { TopicMultiSelect } from "@/components/topic-multi-select";
+import { Search, Pencil, X, BookOpen, Folder, Sparkles } from "lucide-react";
 import type { LibraryItem, AccessLevel } from "@/lib/portal-types";
 
 const BLANK: Omit<LibraryItem, "id"> = {
@@ -15,6 +17,7 @@ const BLANK: Omit<LibraryItem, "id"> = {
   pdfPath: null,
   notes: "",
   access: "open",
+  relatedTopicIds: [],
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -34,7 +37,26 @@ export function AdminLibraryView() {
   const [editItem, setEditItem] = useState<Partial<LibraryItem> & { _new?: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pdfPickerOpen, setPdfPickerOpen] = useState(false);
+  const queryHandledRef = useRef("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const newRequested = params.get("new") === "1";
+    const editId = params.get("edit");
+    const topicId = params.get("topic");
+    const key = newRequested ? `new:${topicId || ""}` : editId ? `edit:${editId}` : "";
+    if (!key || queryHandledRef.current === key || !state.loaded) return;
+    queryHandledRef.current = key;
+    if (newRequested) {
+      setEditItem({ ...BLANK, relatedTopicIds: topicId ? [topicId] : [], _new: true });
+    } else if (editId) {
+      const item = state.libraryItems.find((entry) => entry.id === editId);
+      if (item) setEditItem({ ...item });
+    }
+  }, [state.loaded, state.libraryItems]);
 
   const distinctCategories = [...new Set(state.libraryItems.map((i) => i.category))].filter(Boolean).sort();
 
@@ -78,11 +100,40 @@ export function AdminLibraryView() {
     }
   }
 
+  async function importPdf(path: string) {
+    setImporting(true);
+    setImportMessage(null);
+    try {
+      const response = await fetch("/api/pdf-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      });
+      const data = await response.json() as { error?: string; title?: string; authors?: string; year?: string; source?: string; content?: string; pages?: number; tables?: number; images?: string[] };
+      if (!response.ok) throw new Error(data.error || "Не удалось разобрать PDF");
+      setEditItem((prev) => prev ? {
+        ...prev,
+        pdfPath: path,
+        title: data.title || prev.title,
+        authors: data.authors || prev.authors,
+        year: data.year || prev.year,
+        source: data.source || prev.source,
+        notes: data.content || prev.notes,
+      } : prev);
+      setImportMessage({ kind: "ok", text: `Перенесено: ${data.pages ?? 0} стр., ${data.tables ?? 0} табл., ${data.images?.length ?? 0} изображений.` });
+    } catch (error) {
+      setImportMessage({ kind: "error", text: error instanceof Error ? error.message : "Ошибка импорта PDF" });
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function handleUploadPdf(file: File) {
     setUploading(true);
     try {
       const result = await uploadFile(file);
       setEditItem((prev) => prev ? { ...prev, pdfPath: result.path } : prev);
+      await importPdf(result.path);
     } finally {
       setUploading(false);
     }
@@ -205,7 +256,7 @@ export function AdminLibraryView() {
         <div className="detail-backdrop" onClick={() => setEditItem(null)}>
           <div
             className="detail-dialog"
-            style={{ maxWidth: 540, padding: 32 }}
+            style={{ maxWidth: 860, padding: 32 }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="panel-title" style={{ marginBottom: 20 }}>
@@ -263,6 +314,14 @@ export function AdminLibraryView() {
                 />
               </Field>
 
+              <Field label="Научные темы">
+                <TopicMultiSelect
+                  topics={state.topics}
+                  selected={editItem.relatedTopicIds ?? []}
+                  onChange={(relatedTopicIds) => setEditItem((current) => current && ({ ...current, relatedTopicIds }))}
+                />
+              </Field>
+
               <Field label="PDF файл">
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   {editItem.pdfPath ? (
@@ -276,6 +335,9 @@ export function AdminLibraryView() {
                       >
                         Открыть PDF
                       </a>
+                      <button type="button" className="secondary-button" onClick={() => void importPdf(editItem.pdfPath!)} disabled={importing}>
+                        <Sparkles size={13} style={{ marginRight: 5 }} /> {importing ? "Перенос…" : "Заполнить из PDF"}
+                      </button>
                       <button
                         className="icon-button"
                         style={{ fontSize: 11 }}
@@ -310,16 +372,16 @@ export function AdminLibraryView() {
                     </div>
                   )}
                 </div>
+                {importMessage && <div style={{ marginTop: 7, fontSize: 12, color: importMessage.kind === "ok" ? "var(--forest2)" : "var(--red)" }}>{importMessage.text}</div>}
               </Field>
 
-              <Field label="Заметки">
-                <textarea
-                  className="text-input"
-                  rows={3}
+              <Field label="Заметки / перенесённый текст">
+                <MarkdownEditor
                   value={editItem.notes ?? ""}
-                  onChange={(e) => setEditItem((p) => p && { ...p, notes: e.target.value })}
-                  placeholder="Краткое примечание, почему полезна..."
-                  style={{ resize: "vertical" }}
+                  onChange={(value) => setEditItem((p) => p && { ...p, notes: value })}
+                  onUploadFile={uploadFile}
+                  placeholder="Краткое примечание или текст, перенесённый из PDF..."
+                  minHeight={220}
                 />
               </Field>
 
@@ -342,7 +404,8 @@ export function AdminLibraryView() {
               <button
                 className="primary-button"
                 onClick={handleSave}
-                disabled={saving || !editItem.title?.trim() || !editItem.authors?.trim()}
+                disabled={saving || !editItem.title?.trim() || !editItem.authors?.trim() || !(editItem.relatedTopicIds?.length)}
+                title={!editItem.relatedTopicIds?.length ? "Выберите хотя бы одну научную тему" : undefined}
               >
                 {saving ? "Сохранение..." : "Сохранить"}
               </button>
@@ -358,7 +421,7 @@ export function AdminLibraryView() {
         <FilePicker
           accept=".pdf"
           label="Выбрать PDF"
-          onSelect={(path) => setEditItem((p) => p ? { ...p, pdfPath: path } : p)}
+          onSelect={(path) => void importPdf(path)}
           onClose={() => setPdfPickerOpen(false)}
         />
       )}

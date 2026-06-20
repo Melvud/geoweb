@@ -23,6 +23,12 @@ function imageMarkdown(attrs: any): string {
   return `![${alt ?? ""}${mods.length ? "|" + mods.join("|") : ""}](${src})`;
 }
 
+function markdownToEditorHtml(markdown: string): string {
+  // TipTap не знает узел figure/figcaption и иначе превращает figcaption в
+  // обычный абзац, который при сохранении становится второй подписью.
+  return parseMarkdown(markdown).replace(/<figcaption\b[^>]*>[\s\S]*?<\/figcaption>/gi, "");
+}
+
 function serializeInline(node: any): string {
   if (node.type === "hardBreak") return "\n";
   if (node.type === "text") {
@@ -137,6 +143,12 @@ const ResizableImage = Image.extend({
       applyWidth(node.attrs.width);
       wrapper.appendChild(img);
 
+      const caption = document.createElement("span");
+      caption.className = "markdown-figcaption wysiwyg-img-caption";
+      caption.textContent = node.attrs.alt || "";
+      caption.hidden = !node.attrs.alt;
+      wrapper.appendChild(caption);
+
       const handle = document.createElement("span");
       handle.className = "md-resize-handle";
       wrapper.appendChild(handle);
@@ -186,6 +198,8 @@ const ResizableImage = Image.extend({
           if (updatedNode.type.name !== "image") return false;
           img.src = updatedNode.attrs.src;
           img.alt = updatedNode.attrs.alt || "";
+          caption.textContent = updatedNode.attrs.alt || "";
+          caption.hidden = !updatedNode.attrs.alt;
           applyWidth(updatedNode.attrs.width);
           return true;
         },
@@ -346,7 +360,7 @@ export function WysiwygEditor({ value, onChange, onInsertImage, onInsertVideo, m
       TableCell,
       RawHtmlNode,
     ],
-    content: parseMarkdown(value),
+    content: markdownToEditorHtml(value),
     onUpdate: handleUpdate,
     editorProps: {
       attributes: {
@@ -361,7 +375,7 @@ export function WysiwygEditor({ value, onChange, onInsertImage, onInsertVideo, m
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     if (value === lastEmitted.current) return;
-    editor.commands.setContent(parseMarkdown(value));
+    editor.commands.setContent(markdownToEditorHtml(value));
   }, [value, editor]);
 
   if (!editor) return null;

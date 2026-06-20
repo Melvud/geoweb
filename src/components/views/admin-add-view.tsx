@@ -7,19 +7,43 @@ import { disciplines, topicOptions, accessLabel } from "@/lib/portal-seed";
 import { typeShort, typeTint, materialTypeOrder } from "@/lib/portal-utils";
 import { MarkdownEditor } from "@/components/portal-markdown-editor";
 import { ComboInput } from "@/components/portal-combo-input";
+import { TopicMultiSelect } from "@/components/topic-multi-select";
+import { TopicRelationsEditor } from "@/components/topic-relations-editor";
 import { FilePicker } from "@/components/file-picker";
-import { FileText, Folder, Paperclip, X } from "lucide-react";
+import { ExternalLink, FileText, Folder, Paperclip, Sparkles, X } from "lucide-react";
 import type { AccessLevel, AddType } from "@/lib/portal-types";
+
+type PdfImportData = {
+  error?: string;
+  title?: string;
+  authors?: string;
+  year?: string;
+  source?: string;
+  doi?: string;
+  content?: string;
+  images?: string[];
+  tables?: number;
+  pages?: number;
+};
 
 export function AdminAddView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
   const editType = searchParams.get("type");
+  const createRequested = searchParams.get("new") === "1";
+  const requestedTopicId = searchParams.get("topic");
+  const createRequestRef = useRef("");
 
   const [uploading, setUploading] = useState(false);
+  const [doiImporting, setDoiImporting] = useState(false);
+  const [pdfImporting, setPdfImporting] = useState(false);
+  const [doiImportMessage, setDoiImportMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [mainPdfPickerOpen, setMainPdfPickerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mainPdfInputRef = useRef<HTMLInputElement>(null);
+  const sourceOrderRef = useRef<Array<"doi" | "pdf">>([]);
 
   const {
     state,
@@ -36,6 +60,12 @@ export function AdminAddView() {
     uploadFile,
     askUploadFolder,
   } = usePortal();
+
+  function setRelatedTopics(ids: string[]) {
+    updateForm("relatedTopicIds", ids);
+    const firstTopic = state.topics.find((topic) => topic.id === ids[0]);
+    updateForm("topic", firstTopic?.name || "");
+  }
 
   // Загрузка с обязательным вопросом «в какую папку?»
   async function uploadWithPrompt(file: File) {
@@ -77,6 +107,20 @@ export function AdminAddView() {
     state.archiveItems,
   ]);
 
+  useEffect(() => {
+    if (!createRequested || !editType || !state.loaded) return;
+    if (!(["learning", "publication", "photo", "archive"] as string[]).includes(editType)) return;
+    const requestKey = `${editType}:${requestedTopicId || ""}`;
+    if (createRequestRef.current === requestKey) return;
+    createRequestRef.current = requestKey;
+    setAddType(editType as AddType);
+    if (requestedTopicId && state.topics.some((topic) => topic.id === requestedTopicId)) {
+      updateForm("relatedTopicIds", [requestedTopicId]);
+      const topic = state.topics.find((item) => item.id === requestedTopicId);
+      updateForm("topic", topic?.name || "");
+    }
+  }, [createRequested, editType, requestedTopicId, state.loaded, state.topics]);
+
 
 
   const tagSuggestionPool =
@@ -107,20 +151,27 @@ export function AdminAddView() {
           const res = await handleUpload(file, folder);
           if (res) {
             newAttachments.push({ name: file.name, path: res.path, size: file.size });
-            if (["learning", "archive"].includes(state.addType) && !state.form.filePath) {
+            if ((state.addType === "learning" || state.addType === "archive") && !state.form.filePath) {
               updateForm("filePath", res.path);
+            }
+            if ((state.addType === "archive" || state.addType === "learning") && file.name.toLowerCase().endsWith(".pdf")) {
+              void processPdfForAutofill(res.path, state.addType);
             }
           }
         }
         updateForm("attachments", newAttachments);
       } else if (state.addType === "photo") {
-        const file = files[0];
-        const res = await handleUpload(file, folder);
-        if (res) {
-          updateForm("imagePath", res.path);
-          if (!state.form.title) {
-            const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
-            updateForm("title", nameWithoutExt);
+        const uploaded = [...(state.form.attachments || [])];
+        for (const file of Array.from(files)) {
+          const res = await handleUpload(file, folder);
+          if (res) uploaded.push({ name: file.name, path: res.path, size: file.size });
+        }
+        if (uploaded.length > 0) {
+          updateForm("attachments", uploaded);
+          updateForm("imagePath", uploaded[0].path);
+          if (!state.form.title && uploaded.length === 1) {
+            const fileName = uploaded[0].name;
+            updateForm("title", fileName.substring(0, fileName.lastIndexOf(".")) || fileName);
           }
         }
       }
@@ -164,20 +215,27 @@ export function AdminAddView() {
           const res = await handleUpload(file, folder);
           if (res) {
             newAttachments.push({ name: file.name, path: res.path, size: file.size });
-            if (["learning", "archive"].includes(state.addType) && !state.form.filePath) {
+            if ((state.addType === "learning" || state.addType === "archive") && !state.form.filePath) {
               updateForm("filePath", res.path);
+            }
+            if ((state.addType === "archive" || state.addType === "learning") && file.name.toLowerCase().endsWith(".pdf")) {
+              void processPdfForAutofill(res.path, state.addType);
             }
           }
         }
         updateForm("attachments", newAttachments);
       } else if (state.addType === "photo") {
-        const file = files[0];
-        const res = await handleUpload(file, folder);
-        if (res) {
-          updateForm("imagePath", res.path);
-          if (!state.form.title) {
-            const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
-            updateForm("title", nameWithoutExt);
+        const uploaded = [...(state.form.attachments || [])];
+        for (const file of Array.from(files)) {
+          const res = await handleUpload(file, folder);
+          if (res) uploaded.push({ name: file.name, path: res.path, size: file.size });
+        }
+        if (uploaded.length > 0) {
+          updateForm("attachments", uploaded);
+          updateForm("imagePath", uploaded[0].path);
+          if (!state.form.title && uploaded.length === 1) {
+            const fileName = uploaded[0].name;
+            updateForm("title", fileName.substring(0, fileName.lastIndexOf(".")) || fileName);
           }
         }
       }
@@ -193,11 +251,20 @@ export function AdminAddView() {
     const fileName = webPath.split("/").pop() ?? webPath;
     if (state.addType === "photo") {
       updateForm("imagePath", webPath);
-    } else if (["learning", "archive"].includes(state.addType)) {
-      if (!state.form.filePath) updateForm("filePath", webPath);
       const current = state.form.attachments || [];
       if (!current.find((a) => a.path === webPath)) {
         updateForm("attachments", [...current, { name: fileName, path: webPath, size: 0 }]);
+      }
+    } else if (["learning", "archive"].includes(state.addType)) {
+      if ((state.addType === "learning" || state.addType === "archive") && !state.form.filePath) {
+        updateForm("filePath", webPath);
+      }
+      const current = state.form.attachments || [];
+      if (!current.find((a) => a.path === webPath)) {
+        updateForm("attachments", [...current, { name: fileName, path: webPath, size: 0 }]);
+      }
+      if (fileName.toLowerCase().endsWith(".pdf")) {
+        void processPdfForAutofill(webPath, state.addType as "archive" | "learning");
       }
     } else if (state.addType === "publication") {
       const current = state.form.attachments || [];
@@ -222,6 +289,168 @@ export function AdminAddView() {
       state.form.tags.length > 0
     ) {
       removeTag(state.form.tags[state.form.tags.length - 1]);
+    }
+  }
+
+  function rememberSource(source: "doi" | "pdf") {
+    if (!sourceOrderRef.current.includes(source)) sourceOrderRef.current.push(source);
+  }
+
+  async function applyDoiImport(doi: string, options: { keepSummary?: boolean } = {}) {
+      const response = await fetch(`/api/doi?doi=${encodeURIComponent(doi)}`);
+      const data = await response.json() as {
+        error?: string;
+        title?: string;
+        authors?: string;
+        year?: string;
+        journal?: string;
+        ptype?: string;
+        doi?: string;
+        externalUrl?: string;
+        summary?: string;
+        keywords?: string[];
+        language?: string;
+        missing?: string[];
+      };
+      if (!response.ok) throw new Error(data.error || "Не удалось найти публикацию");
+
+      if (data.title) updateForm("title", data.title);
+      if (data.authors) updateForm("authors", data.authors);
+      if (data.year) updateForm("year", data.year);
+      if (data.journal) updateForm("journal", data.journal);
+      if (data.ptype) updateForm("ptype", data.ptype);
+      if (data.doi) updateForm("doi", data.doi);
+      if (data.externalUrl) updateForm("externalUrl", data.externalUrl);
+      if (data.summary && !options.keepSummary) updateForm("summary", data.summary);
+      if (data.keywords?.length) updateForm("tags", data.keywords);
+      if (data.language) updateForm("lang", data.language);
+      return { missing: data.missing ?? [] };
+  }
+
+  async function applyPdfImport(webPath: string, type: "publication" | "archive" | "learning", contentOnly = false) {
+    const response = await fetch("/api/pdf-import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: webPath }),
+    });
+    const data = await response.json() as PdfImportData;
+    if (!response.ok) throw new Error(data.error || "Не удалось разобрать PDF");
+    if (!data.content || data.content.length < 100) throw new Error("В PDF не найден извлекаемый текст");
+
+    if (!contentOnly && data.title) updateForm("title", data.title);
+    if (!contentOnly && data.year) updateForm("year", data.year);
+    
+    let textToInsert = data.content;
+    if (textToInsert.length > 1000) {
+      textToInsert = textToInsert.substring(0, 1000) + "...";
+    }
+
+    if (type === "publication") {
+      if (!contentOnly && data.authors) updateForm("authors", data.authors);
+      if (!contentOnly && data.source) updateForm("journal", data.source);
+      if (!contentOnly && data.doi) updateForm("doi", data.doi);
+      updateForm("summary", data.content);
+    } else {
+      updateForm("desc", textToInsert);
+    }
+    return data;
+  }
+
+  async function runPublicationAutofill(overrides: { doi?: string; pdfPath?: string } = {}) {
+    const doi = overrides.doi ?? state.form.doi.trim();
+    const pdfPath = overrides.pdfPath ?? state.form.pdfPath ?? "";
+    if (!doi && !pdfPath) {
+      setDoiImportMessage({ kind: "error", text: "Сначала укажите DOI или загрузите основной PDF" });
+      return;
+    }
+
+    const available = sourceOrderRef.current.filter((source) => source === "doi" ? Boolean(doi) : Boolean(pdfPath));
+    for (const source of ["doi", "pdf"] as const) {
+      if ((source === "doi" ? doi : pdfPath) && !available.includes(source)) available.push(source);
+    }
+
+    setDoiImporting(true);
+    setPdfImporting(true);
+    setDoiImportMessage(null);
+    const errors: string[] = [];
+    try {
+      for (const source of available) {
+        try {
+          if (source === "doi") {
+            const result = await applyDoiImport(doi);
+            let enrichment = "";
+            if (pdfPath) {
+              try {
+                const pdf = await applyPdfImport(pdfPath, "publication", true);
+                enrichment = ` Текст дополнен из PDF: ${pdf.tables ?? 0} табл., ${pdf.images?.length ?? 0} изображений.`;
+              } catch {
+                enrichment = " Основной PDF сохранён, но его содержимое не удалось перенести.";
+              }
+            }
+            setDoiImportMessage({ kind: "ok", text: (result.missing.length ? `Заполнено по DOI. Не найдено: ${result.missing.join(", ")}.` : "Все доступные поля заполнены по DOI.") + enrichment });
+          } else {
+            const result = await applyPdfImport(pdfPath, "publication");
+            let enrichment = "";
+            if (result.doi) {
+              try {
+                await applyDoiImport(result.doi, { keepSummary: true });
+                enrichment = " Библиография уточнена по DOI, найденному внутри PDF.";
+              } catch {
+                enrichment = " DOI найден в PDF, но внешний реестр не ответил.";
+              }
+            }
+            setDoiImportMessage({ kind: "ok", text: `Заполнено из основного PDF: ${result.pages ?? 0} стр., ${result.tables ?? 0} табл., ${result.images?.length ?? 0} изображений.${enrichment}` });
+          }
+          return;
+        } catch (error) {
+          errors.push(`${source === "doi" ? "DOI" : "PDF"}: ${error instanceof Error ? error.message : "ошибка"}`);
+        }
+      }
+      setDoiImportMessage({ kind: "error", text: errors.join("; ") });
+    } finally {
+      setDoiImporting(false);
+      setPdfImporting(false);
+    }
+  }
+
+  async function importByDoi() {
+    rememberSource("doi");
+    await runPublicationAutofill();
+  }
+
+  async function processPdfForAutofill(webPath: string, type: "archive" | "learning") {
+    setPdfImporting(true);
+    setDoiImportMessage(null);
+    try {
+      const result = await applyPdfImport(webPath, type);
+      setDoiImportMessage({ kind: "ok", text: `Текст и данные перенесены из PDF: ${result.pages ?? 0} стр.` });
+    } catch (error) {
+      setDoiImportMessage({ kind: "error", text: error instanceof Error ? error.message : "Ошибка извлечения данных из PDF" });
+    } finally {
+      setPdfImporting(false);
+    }
+  }
+
+  async function handleMainPdfPath(webPath: string) {
+    rememberSource("pdf");
+    if (state.addType === "publication") {
+      updateForm("pdfPath", webPath);
+      await runPublicationAutofill({ pdfPath: webPath });
+    }
+  }
+
+  async function handleMainPdfUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const folder = await askUploadFolder();
+    if (folder === null) return;
+    setUploading(true);
+    try {
+      const result = await uploadFile(file, folder);
+      await handleMainPdfPath(result.path);
+    } finally {
+      setUploading(false);
+      event.target.value = "";
     }
   }
 
@@ -299,7 +528,8 @@ export function AdminAddView() {
           >
             <input
               type="file"
-              multiple={["publication", "learning", "archive"].includes(state.addType)}
+              multiple={["publication", "learning", "archive", "photo"].includes(state.addType)}
+              accept={state.addType === "photo" ? "image/*" : undefined}
               style={{ display: "none" }}
               ref={fileInputRef}
               onChange={handleFileChange}
@@ -318,25 +548,25 @@ export function AdminAddView() {
                 />
                 <div style={{ fontSize: 13, color: "var(--muted)" }}>Нажмите или перетащите для замены фото</div>
               </div>
-            ) : (state.addType === "learning" || state.addType === "archive") && state.form.filePath ? (
+            ) : ["learning", "archive"].includes(state.addType) && state.form.filePath ? (
               <div>
                 <div style={{ marginBottom: 8, color: "var(--muted)", display: "flex", justifyContent: "center" }}><FileText size={40} strokeWidth={1.2} /></div>
                 <div style={{ fontWeight: 600, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 300, margin: "0 auto" }}>
                   {state.form.filePath.split("/").pop()}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Нажмите или перетащите для замены файла</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Нажмите или перетащите для добавления файлов</div>
               </div>
             ) : (
               <div>
                 <div className="drop-zone-circle">+</div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>
                   {state.addType === "photo"
-                    ? "Перетащите фотографию или нажмите для выбора"
+                    ? "Перетащите одну или несколько фотографий"
                     : "Перетащите файлы приложений или нажмите для выбора"}
                 </div>
                 <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
                   {state.addType === "photo"
-                    ? "JPG, PNG, TIFF — размер до 50MB"
+                    ? "Одно или сразу много фото — все попадут в выбранный альбом"
                     : "PDF, PPTX, DOCX, XLSX, ZIP и др. — можно выбрать несколько"}
                 </div>
               </div>
@@ -345,7 +575,15 @@ export function AdminAddView() {
           )}
 
           {state.addType !== "topic" && (
-            <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                {pdfImporting && <span style={{ fontSize: 12, color: "var(--muted)" }}>Извлечение данных из PDF...</span>}
+                {!pdfImporting && doiImportMessage && ["archive", "learning"].includes(state.addType) && (
+                  <span style={{ fontSize: 12, color: doiImportMessage.kind === "ok" ? "var(--forest2)" : "var(--red)" }}>
+                    {doiImportMessage.text}
+                  </span>
+                )}
+              </div>
               <button
                 type="button"
                 className="secondary-button"
@@ -357,9 +595,11 @@ export function AdminAddView() {
             </div>
           )}
 
-          {["publication", "learning", "archive"].includes(state.addType) && state.form.attachments && state.form.attachments.length > 0 && (
+          {["publication", "learning", "archive", "photo"].includes(state.addType) && state.form.attachments && state.form.attachments.length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <label className="field-label">Загруженные приложения ({state.form.attachments.length})</label>
+              <label className="field-label">
+                {state.addType === "photo" ? "Выбранные фотографии" : "Загруженные приложения"} ({state.form.attachments.length})
+              </label>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {state.form.attachments.map((file, idx) => (
                   <div
@@ -391,6 +631,10 @@ export function AdminAddView() {
                       onClick={() => {
                         const updated = state.form.attachments.filter((_, i) => i !== idx);
                         updateForm("attachments", updated);
+                        if (state.addType === "photo") updateForm("imagePath", updated[0]?.path ?? null);
+                        if (["learning", "archive"].includes(state.addType) && state.form.filePath === file.path) {
+                          updateForm("filePath", updated[0]?.path ?? null);
+                        }
                       }}
                     >
                       <X size={14} strokeWidth={2} />
@@ -402,7 +646,9 @@ export function AdminAddView() {
           )}
 
           <div style={{ marginTop: 18 }}>
-            <label className="field-label">Название</label>
+            <label className="field-label">
+              {state.addType === "photo" && state.form.attachments.length > 1 ? "Название (для одиночного фото)" : "Название"}
+            </label>
             <input
               className="text-input"
               placeholder="Напр. Введение в палеонтологию"
@@ -440,6 +686,8 @@ export function AdminAddView() {
                   placeholder="Что внутри, для кого, как использовать..."
                   value={state.form.desc}
                   onChange={(event) => updateForm("desc", event.target.value)}
+                  maxLength={1000}
+                  style={{ minHeight: 120 }}
                 />
               </div>
 
@@ -480,11 +728,86 @@ export function AdminAddView() {
                   </select>
                 </div>
               </div>
+              <div style={{ marginTop: 16 }}>
+                <label className="field-label">Научные темы</label>
+                <TopicMultiSelect topics={state.topics} selected={state.form.relatedTopicIds} onChange={setRelatedTopics} />
+              </div>
             </Fragment>
           ) : null}
 
           {state.addType === "publication" ? (
             <Fragment>
+              <div style={{ marginTop: 16, padding: 16, border: "2px solid var(--clay)", borderRadius: 10, background: "var(--paper)" }}>
+                <div className="field-label" style={{ color: "var(--clay)" }}>Основной PDF публикации</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", margin: "4px 0 10px" }}>
+                  Хранится отдельно от приложений и используется для переноса текста, таблиц и изображений.
+                </div>
+                <input ref={mainPdfInputRef} type="file" accept=".pdf,application/pdf" style={{ display: "none" }} onChange={handleMainPdfUpload} />
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  {state.form.pdfPath ? (
+                    <>
+                      <a href={state.form.pdfPath} target="_blank" rel="noopener noreferrer" className="secondary-button" style={{ textDecoration: "none" }}>Открыть основной PDF</a>
+                      <button type="button" className="secondary-button" onClick={() => void runPublicationAutofill()} disabled={pdfImporting || doiImporting}>
+                        <Sparkles size={14} style={{ marginRight: 5 }} /> Перезаполнить
+                      </button>
+                      <button type="button" className="icon-button" onClick={() => updateForm("pdfPath", null)} title="Убрать основной PDF"><X size={14} /></button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="secondary-button" onClick={() => mainPdfInputRef.current?.click()} disabled={uploading}>↑ Загрузить основной PDF</button>
+                      <button type="button" className="secondary-button" onClick={() => setMainPdfPickerOpen(true)}><Folder size={13} style={{ marginRight: 5 }} /> Из загруженных</button>
+                    </>
+                  )}
+                  {(uploading || pdfImporting) && <span style={{ fontSize: 12, color: "var(--muted)" }}>{uploading ? "Загрузка…" : "Разбираю PDF…"}</span>}
+                </div>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 9, marginTop: 13, paddingTop: 12, borderTop: "1px solid var(--line)", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={state.form.pdfPublic}
+                    onChange={(event) => updateForm("pdfPublic", event.target.checked)}
+                    style={{ marginTop: 2 }}
+                  />
+                  <span>
+                    <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>Показывать основной PDF и разрешать скачивание</span>
+                    <span style={{ display: "block", fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>Если выключено, файл доступен только в админке. Приложения настраиваются отдельно.</span>
+                  </span>
+                </label>
+              </div>
+              <div style={{ marginTop: 16, padding: 16, border: "1px solid var(--line)", borderRadius: 10, background: "var(--sand)" }}>
+                <label className="field-label">DOI — автоматическое заполнение</label>
+                <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+                  <input
+                    className="text-input"
+                    placeholder="10.1000/example или https://doi.org/..."
+                    value={state.form.doi}
+                    onChange={(event) => {
+                      if (event.target.value.trim()) rememberSource("doi");
+                      updateForm("doi", event.target.value);
+                      setDoiImportMessage(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void importByDoi();
+                      }
+                    }}
+                  />
+                  <button type="button" className="primary-button" onClick={importByDoi} disabled={doiImporting} style={{ whiteSpace: "nowrap" }}>
+                    <Sparkles size={14} strokeWidth={1.8} style={{ marginRight: 6 }} />
+                    {doiImporting ? "Ищу…" : "Заполнить по DOI"}
+                  </button>
+                </div>
+                {state.form.doi && /^\s*(?:https?:\/\/(?:dx\.)?doi\.org\/)?10\.\d{4,9}\//i.test(state.form.doi) && (
+                  <a href={state.form.doi.startsWith("http") ? state.form.doi : `https://doi.org/${state.form.doi.replace(/^doi:\s*/i, "")}`} target="_blank" rel="noopener noreferrer" className="panel-link" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8, fontSize: 12 }}>
+                    Проверить DOI <ExternalLink size={12} />
+                  </a>
+                )}
+                {doiImportMessage && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: doiImportMessage.kind === "ok" ? "var(--forest2)" : "var(--red)" }}>
+                    {doiImportMessage.text}
+                  </div>
+                )}
+              </div>
               <div className="form-grid" style={{ marginTop: 16 }}>
                 <div>
                   <label className="field-label">Авторы</label>
@@ -527,25 +850,21 @@ export function AdminAddView() {
                     onChange={(event) => updateForm("year", event.target.value)}
                   />
                 </div>
-              </div>
-              <div className="form-grid" style={{ marginTop: 16 }}>
                 <div>
-                  <label className="field-label">Научная тема</label>
-                  <select
-                    className="select-input"
-                    value={state.form.topic}
-                    onChange={(event) => updateForm("topic", event.target.value)}
-                  >
-                    <option value="">— не привязано —</option>
-                    {state.topics.map((t) => (
-                      <option key={t.id} value={t.name}>{t.name}</option>
-                    ))}
-                  </select>
-                  {state.topics.length === 0 && (
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                      Сначала создайте научную тему в разделе «Научные темы»
-                    </div>
-                  )}
+                  <label className="field-label">Внешний сайт</label>
+                  <input
+                    className="text-input"
+                    type="url"
+                    placeholder="https://сайт-издателя/..."
+                    value={state.form.externalUrl}
+                    onChange={(event) => updateForm("externalUrl", event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="form-grid-three" style={{ marginTop: 16 }}>
+                <div>
+                  <label className="field-label">Научные темы</label>
+                  <TopicMultiSelect topics={state.topics} selected={state.form.relatedTopicIds} onChange={setRelatedTopics} />
                 </div>
                 <div>
                   <label className="field-label">Регион</label>
@@ -553,6 +872,15 @@ export function AdminAddView() {
                     className="text-input"
                     value={state.form.region}
                     onChange={(event) => updateForm("region", event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Геологический возраст</label>
+                  <input
+                    className="text-input"
+                    placeholder="Напр. Девон, карбон"
+                    value={state.form.age}
+                    onChange={(event) => updateForm("age", event.target.value)}
                   />
                 </div>
               </div>
@@ -571,6 +899,21 @@ export function AdminAddView() {
 
           {state.addType === "photo" ? (
             <Fragment>
+              <div className="form-grid" style={{ marginTop: 16 }}>
+                <div>
+                  <label className="field-label">Папка / альбом</label>
+                  <ComboInput
+                    value={state.form.groupName}
+                    onChange={(value) => updateForm("groupName", value)}
+                    suggestions={[...new Set(state.photos.map((photo) => photo.group).filter(Boolean))]}
+                    placeholder="Выберите альбом или введите название нового"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Научные темы</label>
+                  <TopicMultiSelect topics={state.topics} selected={state.form.relatedTopicIds} onChange={setRelatedTopics} />
+                </div>
+              </div>
               <div className="form-grid" style={{ marginTop: 16 }}>
                 <div>
                   <label className="field-label">Тип объекта</label>
@@ -616,6 +959,31 @@ export function AdminAddView() {
                   />
                 </div>
               </div>
+              <div className="form-grid" style={{ marginTop: 16 }}>
+                <div>
+                  <label className="field-label">Место съёмки</label>
+                  <input className="text-input" value={state.form.location} onChange={(event) => updateForm("location", event.target.value)} />
+                </div>
+                <div>
+                  <label className="field-label">Геологический возраст</label>
+                  <input className="text-input" value={state.form.age} onChange={(event) => updateForm("age", event.target.value)} />
+                </div>
+              </div>
+              <div className="form-grid" style={{ marginTop: 16 }}>
+                <div>
+                  <label className="field-label">Автор фотографий</label>
+                  <input className="text-input" value={state.form.author} onChange={(event) => updateForm("author", event.target.value)} />
+                </div>
+                <div>
+                  <label className="field-label">Условия использования</label>
+                  <input className="text-input" value={state.form.usagePolicy} onChange={(event) => updateForm("usagePolicy", event.target.value)} />
+                </div>
+              </div>
+              {state.form.attachments.length > 1 && (
+                <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+                  Для нескольких файлов названия будут взяты из имён файлов. Остальные поля применятся ко всем фотографиям.
+                </div>
+              )}
             </Fragment>
           ) : null}
 
@@ -660,6 +1028,7 @@ export function AdminAddView() {
                   minHeight={320}
                 />
               </div>
+              <TopicRelationsEditor />
             </Fragment>
           ) : null}
 
@@ -696,31 +1065,19 @@ export function AdminAddView() {
                   />
                 </div>
                 <div>
-                  <label className="field-label">Научная тема</label>
-                  <select
-                    className="select-input"
-                    value={state.form.topic}
-                    onChange={(event) => updateForm("topic", event.target.value)}
-                  >
-                    <option value="">— не привязано —</option>
-                    {state.topics.map((t) => (
-                      <option key={t.id} value={t.name}>{t.name}</option>
-                    ))}
-                  </select>
-                  {state.topics.length === 0 && (
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                      Сначала создайте научную тему в разделе «Научные темы»
-                    </div>
-                  )}
+                  <label className="field-label">Научные темы</label>
+                  <TopicMultiSelect topics={state.topics} selected={state.form.relatedTopicIds} onChange={setRelatedTopics} />
                 </div>
               </div>
               <div style={{ marginTop: 16 }}>
                 <label className="field-label">Описание документа</label>
                 <textarea
                   className="text-area"
-                  placeholder="Введите описание архивного документа..."
+                  placeholder="Введите описание или перенесите его из основного PDF (макс. ~2 абзаца)..."
                   value={state.form.desc}
                   onChange={(event) => updateForm("desc", event.target.value)}
+                  maxLength={1000}
+                  style={{ minHeight: 120 }}
                 />
               </div>
               <div style={{ marginTop: 16 }}>
@@ -791,10 +1148,20 @@ export function AdminAddView() {
             <button className="secondary-button" onClick={saveDraft}>
               Сохранить черновик
             </button>
-            <button className="primary-button" onClick={publishForm}>
+            <button
+              className="primary-button"
+              onClick={publishForm}
+              disabled={state.addType !== "topic" && state.form.relatedTopicIds.length === 0}
+              title={state.addType !== "topic" && state.form.relatedTopicIds.length === 0 ? "Выберите хотя бы одну научную тему" : undefined}
+            >
               Опубликовать →
             </button>
           </div>
+          {state.addType !== "topic" && state.form.relatedTopicIds.length === 0 && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "var(--red)", textAlign: "right" }}>
+              Для публикации выберите хотя бы одну научную тему.
+            </div>
+          )}
         </div>
 
         {state.addLayout === "split" ? (
@@ -951,6 +1318,15 @@ export function AdminAddView() {
           label={state.addType === "photo" ? "Выбрать фотографию" : "Выбрать файл"}
           onSelect={handlePickedFile}
           onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {mainPdfPickerOpen && (
+        <FilePicker
+          accept=".pdf"
+          label="Выбрать основной PDF"
+          onSelect={(path) => void handleMainPdfPath(path)}
+          onClose={() => setMainPdfPickerOpen(false)}
         />
       )}
     </div>

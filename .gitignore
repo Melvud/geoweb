@@ -1,2 +1,60 @@
-node_modules
-.next
+# Dependencies
+node_modules/
+
+# Next.js builds and caches
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+
+# User uploads
+public/uploads/
+uploads/
+
+# Databases and their runtime files
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Logs and test output
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+test-results/
+playwright-report/
+
+# Temporary and generated working files
+tmp/
+temp/
+prototype_unpacked/
+tz_unpacked/
+tz_tmp.zip
+tz_text.txt
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates

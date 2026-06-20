@@ -46,7 +46,8 @@ export function initializeDatabase() {
       preview_path TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      attachments_json TEXT DEFAULT '[]'
+      attachments_json TEXT DEFAULT '[]',
+      related_topic_ids_json TEXT NOT NULL DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS publications (
@@ -59,6 +60,7 @@ export function initializeDatabase() {
       doi TEXT NOT NULL,
       external_url TEXT NOT NULL,
       pdf_path TEXT,
+      pdf_public INTEGER NOT NULL DEFAULT 1,
       summary TEXT NOT NULL,
       topic TEXT NOT NULL,
       region TEXT NOT NULL,
@@ -69,7 +71,8 @@ export function initializeDatabase() {
       access TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      attachments_json TEXT DEFAULT '[]'
+      attachments_json TEXT DEFAULT '[]',
+      related_topic_ids_json TEXT NOT NULL DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS photos (
@@ -130,7 +133,8 @@ export function initializeDatabase() {
       dot TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      attachments_json TEXT DEFAULT '[]'
+      attachments_json TEXT DEFAULT '[]',
+      related_topic_ids_json TEXT NOT NULL DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS library_items (
@@ -144,7 +148,8 @@ export function initializeDatabase() {
       notes TEXT NOT NULL,
       access TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      related_topic_ids_json TEXT NOT NULL DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS pages (
@@ -204,6 +209,12 @@ export function initializeDatabase() {
   }
 
   try {
+    db.exec("ALTER TABLE publications ADD COLUMN pdf_public INTEGER NOT NULL DEFAULT 1");
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+
+  try {
     db.exec("ALTER TABLE materials ADD COLUMN attachments_json TEXT DEFAULT '[]'");
   } catch (e) {
     // Column already exists, ignore error
@@ -219,6 +230,14 @@ export function initializeDatabase() {
     db.exec("ALTER TABLE topics ADD COLUMN attachments_json TEXT DEFAULT '[]'");
   } catch (e) {
     // Column already exists, ignore error
+  }
+
+  for (const table of ["materials", "publications", "archive_items", "library_items"]) {
+    try {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN related_topic_ids_json TEXT NOT NULL DEFAULT '[]'`);
+    } catch {
+      // Column already exists.
+    }
   }
 
   return db;

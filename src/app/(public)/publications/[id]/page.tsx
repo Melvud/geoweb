@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { parseMarkdown } from "@/lib/portal-utils";
 import { MarkdownEffectsTrigger } from "@/lib/use-markdown-effects";
 import { ReadingAids } from "@/components/reading-aids";
-import { PdfEmbed } from "@/components/pdf-embed";
 import { RequestAccess } from "@/components/request-access";
+import { PdfEmbed } from "@/components/pdf-embed";
 import { isAccessibleByLink, hasFullAccess } from "@/lib/portal-utils";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -40,8 +40,14 @@ export default async function PublicationDetailPage(context: Params) {
     notFound();
   }
 
+  const publicationTopics = snapshot.topics.filter((topic) => publication.relatedTopicIds?.includes(topic.id));
+
   const parsedAbstract = parseMarkdown(publication.summary);
   const fullAccess = hasFullAccess(publication.access);
+  let externalUrl = publication.externalUrl || "";
+  if (externalUrl && !/^https?:\/\//i.test(externalUrl)) {
+    externalUrl = "https://" + externalUrl;
+  }
 
   return (
     <section className="public-section narrow">
@@ -65,9 +71,25 @@ export default async function PublicationDetailPage(context: Params) {
         {publication.authors}
       </div>
 
-      <div className="serif-title" style={{ fontSize: 16, fontStyle: "italic", color: "var(--muted)", marginBottom: 30 }}>
-        {publication.journal}
+      <div className="serif-title" style={{ fontSize: 16, fontStyle: "italic", color: "var(--muted)", marginBottom: 30, display: "flex", flexWrap: "wrap", gap: "6px 12px", alignItems: "center" }}>
+        <span>{publication.journal}</span>
+        {publication.doi && (
+          <a href={`https://doi.org/${publication.doi.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "")}`} target="_blank" rel="noopener noreferrer" className="panel-link" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            DOI: {publication.doi.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "")} <ExternalLink size={12} />
+          </a>
+        )}
+        {externalUrl && externalUrl !== `https://doi.org/${publication.doi}` && (
+          <a href={externalUrl} target="_blank" rel="noopener noreferrer" className="panel-link" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            Внешний сайт <ExternalLink size={12} />
+          </a>
+        )}
       </div>
+
+      {publication.pdfPath && publication.pdfPublic && fullAccess && (
+        <div style={{ padding: "18px 0", margin: "-12px 0 28px", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
+          <PdfEmbed path={publication.pdfPath} height={680} />
+        </div>
+      )}
 
       <div 
         style={{ 
@@ -81,8 +103,14 @@ export default async function PublicationDetailPage(context: Params) {
         }}
       >
         <div>
-          <div className="field-label" style={{ marginBottom: 4 }}>Научная тема</div>
-          <div style={{ color: "var(--forest2)", fontSize: 14 }}>{publication.topic || "—"}</div>
+          <div className="field-label" style={{ marginBottom: 4 }}>Научные темы</div>
+          <div style={{ color: "var(--forest2)", fontSize: 14 }}>
+            {publicationTopics.length > 0
+              ? publicationTopics.map((topic, index) => (
+                  <span key={topic.id}>{index > 0 ? " · " : ""}<Link href={`/research/${topic.id}`} className="panel-link">{topic.name}</Link></span>
+                ))
+              : publication.topic || "—"}
+          </div>
         </div>
         <div>
           <div className="field-label" style={{ marginBottom: 4 }}>Регион исследования</div>
@@ -141,12 +169,10 @@ export default async function PublicationDetailPage(context: Params) {
       <div style={{ borderTop: "1px solid var(--line)", paddingTop: 24 }}>
         {publication.access === "request" ? (
           <RequestAccess itemTitle={publication.title} />
-        ) : publication.pdfPath && fullAccess ? (
-          <PdfEmbed path={publication.pdfPath} />
         ) : null}
-        {publication.externalUrl && (
+        {externalUrl && externalUrl !== `https://doi.org/${publication.doi}` && (
           <a
-            href={publication.externalUrl}
+            href={externalUrl}
             className="secondary-button"
             target="_blank"
             rel="noopener noreferrer"

@@ -120,6 +120,7 @@ function buildMaterial(form: FormState, status: MaterialStatus): Omit<Material, 
     filePath: form.filePath,
     previewPath: form.previewPath,
     attachments: form.attachments || [],
+    relatedTopicIds: form.relatedTopicIds,
   };
 }
 
@@ -134,6 +135,7 @@ function buildPublication(form: FormState, draft: boolean): Omit<Publication, "i
     doi: form.doi.trim(),
     externalUrl: form.externalUrl.trim(),
     pdfPath: form.pdfPath,
+    pdfPublic: form.pdfPublic,
     summary: form.summary.trim() || form.desc.trim(),
     topic: form.topic,
     region: form.region.trim(),
@@ -143,6 +145,7 @@ function buildPublication(form: FormState, draft: boolean): Omit<Publication, "i
     featured: form.featured,
     access: draft ? "owner" : form.access,
     attachments: form.attachments || [],
+    relatedTopicIds: form.relatedTopicIds,
   };
 }
 
@@ -213,6 +216,7 @@ function buildArchive(form: FormState): Omit<ArchiveItem, "id" | "statusLabel"> 
     access: form.access,
     relatedPublicationIds: form.relatedPublicationIds,
     relatedPhotoIds: form.relatedPhotoIds,
+    relatedTopicIds: form.relatedTopicIds,
     dot: "#9c7a3a",
     attachments: form.attachments || [],
   };
@@ -235,6 +239,25 @@ async function mutateRecord(
   });
 
   return await readJson<{ item: any }>(response);
+}
+
+async function syncTopicFormRelations(topicId: string, form: FormState) {
+  const response = await fetch(`/api/topics/${topicId}/relations`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      selections: {
+        materials: form.relatedMaterialIds,
+        publications: form.relatedPublicationIds,
+        photos: form.relatedPhotoIds,
+        archive: form.relatedArchiveIds,
+        library: form.relatedLibraryIds,
+        mapPlaces: form.relatedMapPlaceIds,
+      },
+      replacements: form.relationReplacements,
+    }),
+  });
+  await readJson<{ ok: boolean }>(response);
 }
 
 export function PortalProvider({ children }: { children: ReactNode }) {
@@ -514,9 +537,27 @@ export function PortalProvider({ children }: { children: ReactNode }) {
         if (state.addType === "publication") {
           result = await mutateRecord("publications", state.form.entityId, buildPublication(state.form, true));
         } else if (state.addType === "photo") {
+          const photos = state.form.attachments || [];
+          if (!state.form.entityId && photos.length > 1) {
+            await Promise.all(photos.map((file) => {
+              const dot = file.name.lastIndexOf(".");
+              const title = dot > 0 ? file.name.slice(0, dot) : file.name;
+              return mutateRecord("photos", null, {
+                ...buildPhoto(state.form, "draft"),
+                id: null,
+                title,
+                imagePath: file.path,
+              });
+            }));
+            await refreshData();
+            setState((current) => ({ ...current, form: blankForm(current.addType) }));
+            flash("Черновики фотографий сохранены");
+            return;
+          }
           result = await mutateRecord("photos", state.form.entityId, buildPhoto(state.form, "draft"));
         } else if (state.addType === "topic") {
           result = await mutateRecord("topics", state.form.entityId, buildTopic(state.form));
+          await syncTopicFormRelations(result.item.id, state.form);
         } else if (state.addType === "archive") {
           result = await mutateRecord("archive", state.form.entityId, buildArchive(state.form));
         } else {
@@ -538,9 +579,24 @@ export function PortalProvider({ children }: { children: ReactNode }) {
         if (state.addType === "publication") {
           await mutateRecord("publications", state.form.entityId, buildPublication(state.form, false));
         } else if (state.addType === "photo") {
-          await mutateRecord("photos", state.form.entityId, buildPhoto(state.form, "published"));
+          const photos = state.form.attachments || [];
+          if (!state.form.entityId && photos.length > 1) {
+            await Promise.all(photos.map((file) => {
+              const dot = file.name.lastIndexOf(".");
+              const title = dot > 0 ? file.name.slice(0, dot) : file.name;
+              return mutateRecord("photos", null, {
+                ...buildPhoto(state.form, "published"),
+                id: null,
+                title,
+                imagePath: file.path,
+              });
+            }));
+          } else {
+            await mutateRecord("photos", state.form.entityId, buildPhoto(state.form, "published"));
+          }
         } else if (state.addType === "topic") {
-          await mutateRecord("topics", state.form.entityId, buildTopic(state.form));
+          const result = await mutateRecord("topics", state.form.entityId, buildTopic(state.form));
+          await syncTopicFormRelations(result.item.id, state.form);
         } else if (state.addType === "archive") {
           await mutateRecord("archive", state.form.entityId, buildArchive(state.form));
         } else {
@@ -653,6 +709,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
             doi: item.doi || "",
             externalUrl: item.externalUrl || "",
             pdfPath: item.pdfPath || null,
+            pdfPublic: item.pdfPublic ?? true,
             ptype: item.ptype || "Статья",
             summary: item.summary || item.desc || "",
             topic: item.topic || topicOptions[0],
@@ -668,8 +725,22 @@ export function PortalProvider({ children }: { children: ReactNode }) {
             coverPath: item.coverPath || null,
             relatedPublicationIds: item.relatedPublicationIds || [],
             relatedPhotoIds: item.relatedPhotoIds || [],
-            relatedTopicIds: item.relatedTopicIds || [],
+            relatedMaterialIds: type === "topic"
+              ? current.materials.filter((material) => material.relatedTopicIds?.includes(item.id)).map((material) => material.id)
+              : [],
+            relatedLibraryIds: type === "topic"
+              ? current.libraryItems.filter((libraryItem) => libraryItem.relatedTopicIds?.includes(item.id)).map((libraryItem) => libraryItem.id)
+              : [],
+            relatedMapPlaceIds: type === "topic"
+              ? current.mapPlaces.filter((mapPlace) => mapPlace.relatedTopicIds?.includes(item.id)).map((mapPlace) => mapPlace.id)
+              : [],
+            relatedTopicIds: item.relatedTopicIds?.length
+              ? item.relatedTopicIds
+              : item.topic
+                ? current.topics.filter((topic) => topic.name === item.topic).map((topic) => topic.id)
+                : [],
             relatedArchiveIds: item.relatedArchiveIds || [],
+            relationReplacements: {},
             ownerComment: item.ownerComment || "",
             featured: item.featured || false,
             attachments: item.attachments || [],

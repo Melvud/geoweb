@@ -36,6 +36,7 @@ export type Material = {
   filePath: string | null;
   previewPath: string | null;
   attachments: Array<{ name: string; path: string; size?: number }>;
+  relatedTopicIds?: string[];
 };
 
 export type Publication = {
@@ -48,6 +49,7 @@ export type Publication = {
   doi: string;
   externalUrl: string;
   pdfPath: string | null;
+  pdfPublic: boolean;
   summary: string;
   topic: string;
   region: string;
@@ -57,6 +59,7 @@ export type Publication = {
   featured: boolean;
   access: AccessLevel;
   attachments: Array<{ name: string; path: string; size?: number }>;
+  relatedTopicIds?: string[];
 };
 
 export type Photo = {
@@ -109,6 +112,7 @@ export type LibraryItem = {
   pdfPath: string | null;
   notes: string;
   access: AccessLevel;
+  relatedTopicIds?: string[];
 };
 
 export type ArchiveItem = {
@@ -127,6 +131,7 @@ export type ArchiveItem = {
   relatedPhotoIds: string[];
   dot: string;
   attachments: Array<{ name: string; path: string; size?: number }>;
+  relatedTopicIds?: string[];
 };
 
 export type MapPlace = {
@@ -191,6 +196,7 @@ export type FormState = {
   doi: string;
   externalUrl: string;
   pdfPath: string | null;
+  pdfPublic: boolean;
   ptype: string;
   summary: string;
   topic: string;
@@ -206,8 +212,12 @@ export type FormState = {
   coverPath: string | null;
   relatedPublicationIds: string[];
   relatedPhotoIds: string[];
+  relatedMaterialIds: string[];
+  relatedLibraryIds: string[];
   relatedTopicIds: string[];
   relatedArchiveIds: string[];
+  relatedMapPlaceIds: string[];
+  relationReplacements: Record<string, string>;
   ownerComment: string;
   featured: boolean;
   attachments: Array<{ name: string; path: string; size?: number }>;

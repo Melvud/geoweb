@@ -39,6 +39,9 @@ export default function AdminPagesPage() {
         about={state.pages.about}
         onSavePage={savePage}
         onUploadFile={uploadWithPrompt}
+        publications={state.publications}
+        topics={state.topics}
+        photos={state.photos}
       />
     </div>
   );

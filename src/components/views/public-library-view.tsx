@@ -6,15 +6,20 @@ import { Search, Download } from "lucide-react";
 import type { LibraryItem } from "@/lib/portal-types";
 import { EditableText } from "@/components/editable-text";
 import { resolveUiText } from "@/lib/ui-text";
-import { isListedPublic } from "@/lib/portal-utils";
+import { isListedPublic, parseMarkdown } from "@/lib/portal-utils";
 
 type SortKey = "year" | "title" | "authors";
+
+function notePreview(value: string) {
+  return value.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/[#*_`|>-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 260);
+}
 
 export function PublicLibraryView() {
   const { state } = usePortal();
 
   const [query, setQuery] = useState("");
   const [selectedCat, setSelectedCat] = useState("all");
+  const [selectedTopic, setSelectedTopic] = useState("all");
   const [sortBy, setSortBy] = useState<SortKey>("year");
 
   const openItems = state.libraryItems.filter((i) => isListedPublic(i.access));
@@ -26,6 +31,7 @@ export function PublicLibraryView() {
       const hay = `${item.title} ${item.authors} ${item.source} ${item.notes}`.toLowerCase();
       if (query && !hay.includes(query.toLowerCase())) return false;
       if (selectedCat !== "all" && item.category !== selectedCat) return false;
+      if (selectedTopic !== "all" && !(item.relatedTopicIds ?? []).includes(selectedTopic)) return false;
       return true;
     })
     .sort((a, b) => {
@@ -69,6 +75,15 @@ export function PublicLibraryView() {
         >
           <option value="all">Все категории</option>
           {distinctCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select
+          className="select-input"
+          value={selectedTopic}
+          onChange={(e) => setSelectedTopic(e.target.value)}
+          style={{ minWidth: 180 }}
+        >
+          <option value="all">Все научные темы</option>
+          {state.topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}</option>)}
         </select>
         <select
           className="select-input"
@@ -133,10 +148,22 @@ export function PublicLibraryView() {
                           {item.year}
                         </span>
                       </div>
-                      {item.notes && (
-                        <div style={{ fontSize: 12.5, color: "var(--muted)", fontStyle: "italic" }}>
-                          {item.notes}
+                      {(item.relatedTopicIds ?? []).length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, margin: "6px 0" }}>
+                          {state.topics.filter((topic) => item.relatedTopicIds?.includes(topic.id)).map((topic) => (
+                            <span key={topic.id} className="mono" style={{ fontSize: 10, color: "var(--clay)" }}>{topic.name}</span>
+                          ))}
                         </div>
+                      )}
+                      {item.notes && (
+                        item.notes.length > 500 ? (
+                          <details style={{ marginTop: 8 }}>
+                            <summary className="panel-link" style={{ cursor: "pointer", fontSize: 12.5 }}>Читать перенесённый текст</summary>
+                            <div className="page-copy markdown-body" style={{ marginTop: 14, maxWidth: "none", fontSize: 14 }} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.notes) }} />
+                          </details>
+                        ) : (
+                          <div style={{ fontSize: 12.5, color: "var(--muted)", fontStyle: "italic" }}>{notePreview(item.notes)}</div>
+                        )
                       )}
                     </div>
                     {item.pdfPath && (

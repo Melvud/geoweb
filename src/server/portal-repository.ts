@@ -109,6 +109,7 @@ function mapMaterial(row: Record<string, unknown>): Material {
     filePath: (row.file_path as string | null) || null,
     previewPath: (row.preview_path as string | null) || null,
     attachments: fromJsonAttachments(row.attachments_json as string | null),
+    relatedTopicIds: fromJsonArray(row.related_topic_ids_json as string | null),
   };
 }
 
@@ -123,6 +124,7 @@ function mapPublication(row: Record<string, unknown>): Publication {
     doi: String(row.doi),
     externalUrl: String(row.external_url),
     pdfPath: (row.pdf_path as string | null) || null,
+    pdfPublic: row.pdf_public === undefined ? true : Boolean(row.pdf_public),
     summary: String(row.summary),
     topic: String(row.topic),
     region: String(row.region),
@@ -132,6 +134,7 @@ function mapPublication(row: Record<string, unknown>): Publication {
     featured: Boolean(row.featured),
     access: row.access as Publication["access"],
     attachments: fromJsonAttachments(row.attachments_json as string | null),
+    relatedTopicIds: fromJsonArray(row.related_topic_ids_json as string | null),
   };
 }
 
@@ -208,6 +211,7 @@ function mapArchiveItem(row: Record<string, unknown>): ArchiveItem {
     relatedPhotoIds: fromJsonArray(row.related_photo_ids_json as string | null),
     dot: String(row.dot),
     attachments: fromJsonAttachments(row.attachments_json as string | null),
+    relatedTopicIds: fromJsonArray(row.related_topic_ids_json as string | null),
   };
 }
 
@@ -222,6 +226,7 @@ function mapLibraryItem(row: Record<string, unknown>): LibraryItem {
     pdfPath: (row.pdf_path as string | null) || null,
     notes: String(row.notes),
     access: row.access as LibraryItem["access"],
+    relatedTopicIds: fromJsonArray(row.related_topic_ids_json as string | null),
   };
 }
 
@@ -361,10 +366,10 @@ function insertSeedRecords(database: DatabaseType) {
 
   const insertPublication = database.prepare(`
     INSERT INTO publications (
-      id, year, authors, title, ptype, journal, doi, external_url, pdf_path, summary, topic, region, age,
+      id, year, authors, title, ptype, journal, doi, external_url, pdf_path, pdf_public, summary, topic, region, age,
       keywords_json, language, featured, access, created_at, updated_at, attachments_json
     ) VALUES (
-      @id, @year, @authors, @title, @ptype, @journal, @doi, @external_url, @pdf_path, @summary, @topic, @region, @age,
+      @id, @year, @authors, @title, @ptype, @journal, @doi, @external_url, @pdf_path, @pdf_public, @summary, @topic, @region, @age,
       @keywords_json, @language, @featured, @access, @created_at, @updated_at, @attachments_json
     )
   `);
@@ -424,6 +429,7 @@ function insertSeedRecords(database: DatabaseType) {
         ...item,
         external_url: item.externalUrl,
         pdf_path: item.pdfPath,
+        pdf_public: item.pdfPublic ? 1 : 0,
         summary: item.summary,
         keywords_json: toJson(item.keywords),
         featured: item.featured ? 1 : 0,
@@ -511,8 +517,30 @@ function fetchRows<T>(query: string, mapper: (row: Record<string, unknown>) => T
   return rows.map(mapper);
 }
 
+function backfillLegacyTopicLinks() {
+  const database = db();
+  const topics = database.prepare("SELECT id, name FROM topics").all() as Array<{ id: string; name: string }>;
+  const updatePublication = database.prepare(`
+    UPDATE publications SET related_topic_ids_json = @ids
+    WHERE topic = @name AND (related_topic_ids_json IS NULL OR related_topic_ids_json = '[]')
+  `);
+  const updateArchive = database.prepare(`
+    UPDATE archive_items SET related_topic_ids_json = @ids
+    WHERE topic = @name AND (related_topic_ids_json IS NULL OR related_topic_ids_json = '[]')
+  `);
+  const transaction = database.transaction(() => {
+    for (const topic of topics) {
+      const ids = toJson([topic.id]);
+      updatePublication.run({ ids, name: topic.name });
+      updateArchive.run({ ids, name: topic.name });
+    }
+  });
+  transaction();
+}
+
 export function getPortalSnapshot(): PortalSnapshot {
   ensureSeedData();
+  backfillLegacyTopicLinks();
 
   const materials = fetchRows(
     "SELECT * FROM materials ORDER BY CAST(year AS INTEGER) DESC, updated_at DESC",
@@ -535,6 +563,23 @@ export function getPortalSnapshot(): PortalSnapshot {
     "SELECT * FROM library_items ORDER BY category ASC, CAST(year AS INTEGER) DESC, title ASC",
     mapLibraryItem,
   );
+  for (const topic of topics) {
+    topic.relatedPublicationIds = [...new Set([
+      ...topic.relatedPublicationIds,
+      ...publications.filter((item) => item.relatedTopicIds?.includes(topic.id)).map((item) => item.id),
+    ])];
+    topic.relatedPhotoIds = [...new Set([
+      ...topic.relatedPhotoIds,
+      ...photos.filter((item) => item.relatedTopicIds.includes(topic.id)).map((item) => item.id),
+    ])];
+    topic.relatedArchiveIds = [...new Set([
+      ...topic.relatedArchiveIds,
+      ...archiveItems.filter((item) => item.relatedTopicIds?.includes(topic.id)).map((item) => item.id),
+    ])];
+    topic.pubs = topic.relatedPublicationIds.length;
+    topic.photos = topic.relatedPhotoIds.length;
+    topic.archive = topic.relatedArchiveIds.length;
+  }
   ensureSeedPlaces();
   const mapPlaces = fetchRows(
     "SELECT * FROM map_places ORDER BY CAST(year AS INTEGER) ASC, title ASC",
@@ -749,10 +794,10 @@ export function createMaterial(
     .prepare(`
       INSERT INTO materials (
         id, title, discipline, mtype, year, language, status, access, tags_json, desc, course,
-        file_path, preview_path, created_at, updated_at, attachments_json
+        file_path, preview_path, created_at, updated_at, attachments_json, related_topic_ids_json
       ) VALUES (
         @id, @title, @discipline, @mtype, @year, @language, @status, @access, @tags_json, @desc, @course,
-        @file_path, @preview_path, @created_at, @updated_at, @attachments_json
+        @file_path, @preview_path, @created_at, @updated_at, @attachments_json, @related_topic_ids_json
       )
     `)
     .run({
@@ -763,6 +808,7 @@ export function createMaterial(
       created_at: timestamp,
       updated_at: timestamp,
       attachments_json: toJson(item.attachments || []),
+      related_topic_ids_json: toJson(item.relatedTopicIds || []),
     });
 
   return item;
@@ -781,7 +827,7 @@ export function updateMaterial(id: string, patch: Partial<Material>) {
       SET title = @title, discipline = @discipline, mtype = @mtype, year = @year, language = @language,
           status = @status, access = @access, tags_json = @tags_json, desc = @desc, course = @course,
           file_path = @file_path, preview_path = @preview_path, updated_at = @updated_at,
-          attachments_json = @attachments_json
+          attachments_json = @attachments_json, related_topic_ids_json = @related_topic_ids_json
       WHERE id = @id
     `)
     .run({
@@ -791,6 +837,7 @@ export function updateMaterial(id: string, patch: Partial<Material>) {
       preview_path: next.previewPath,
       updated_at: now(),
       attachments_json: toJson(next.attachments || []),
+      related_topic_ids_json: toJson(next.relatedTopicIds || []),
     });
 
   return next;
@@ -815,22 +862,24 @@ export function createPublication(
   db()
     .prepare(`
       INSERT INTO publications (
-        id, year, authors, title, ptype, journal, doi, external_url, pdf_path, summary, topic, region, age,
-        keywords_json, language, featured, access, created_at, updated_at, attachments_json
+        id, year, authors, title, ptype, journal, doi, external_url, pdf_path, pdf_public, summary, topic, region, age,
+        keywords_json, language, featured, access, created_at, updated_at, attachments_json, related_topic_ids_json
       ) VALUES (
-        @id, @year, @authors, @title, @ptype, @journal, @doi, @external_url, @pdf_path, @summary, @topic, @region, @age,
-        @keywords_json, @language, @featured, @access, @created_at, @updated_at, @attachments_json
+        @id, @year, @authors, @title, @ptype, @journal, @doi, @external_url, @pdf_path, @pdf_public, @summary, @topic, @region, @age,
+        @keywords_json, @language, @featured, @access, @created_at, @updated_at, @attachments_json, @related_topic_ids_json
       )
     `)
     .run({
       ...item,
       external_url: item.externalUrl,
       pdf_path: item.pdfPath,
+      pdf_public: item.pdfPublic ? 1 : 0,
       keywords_json: toJson(item.keywords),
       featured: item.featured ? 1 : 0,
       created_at: timestamp,
       updated_at: timestamp,
       attachments_json: toJson(item.attachments || []),
+      related_topic_ids_json: toJson(item.relatedTopicIds || []),
     });
 
   return item;
@@ -847,20 +896,22 @@ export function updatePublication(id: string, patch: Partial<Publication>) {
     .prepare(`
       UPDATE publications
       SET year = @year, authors = @authors, title = @title, ptype = @ptype, journal = @journal,
-          doi = @doi, external_url = @external_url, pdf_path = @pdf_path, summary = @summary,
+          doi = @doi, external_url = @external_url, pdf_path = @pdf_path, pdf_public = @pdf_public, summary = @summary,
           topic = @topic, region = @region, age = @age, keywords_json = @keywords_json,
           language = @language, featured = @featured, access = @access, updated_at = @updated_at,
-          attachments_json = @attachments_json
+          attachments_json = @attachments_json, related_topic_ids_json = @related_topic_ids_json
       WHERE id = @id
     `)
     .run({
       ...next,
       external_url: next.externalUrl,
       pdf_path: next.pdfPath,
+      pdf_public: next.pdfPublic ? 1 : 0,
       keywords_json: toJson(next.keywords),
       featured: next.featured ? 1 : 0,
       updated_at: now(),
       attachments_json: toJson(next.attachments || []),
+      related_topic_ids_json: toJson(next.relatedTopicIds || []),
     });
 
   return next;
@@ -1018,6 +1069,89 @@ export function updateTopic(id: string, patch: Partial<Topic>) {
   return next;
 }
 
+export type TopicRelationSelection = {
+  materials: string[];
+  publications: string[];
+  photos: string[];
+  archive: string[];
+  library: string[];
+  mapPlaces: string[];
+};
+
+const relationTables = {
+  materials: "materials",
+  publications: "publications",
+  photos: "photos",
+  archive: "archive_items",
+  library: "library_items",
+  mapPlaces: "map_places",
+} as const;
+
+export function syncTopicRelations(
+  topicId: string,
+  selections: TopicRelationSelection,
+  replacements: Record<string, string> = {},
+) {
+  const database = db();
+  const topicIds = new Set(
+    (database.prepare("SELECT id FROM topics").all() as Array<{ id: string }>).map((row) => row.id),
+  );
+  if (!topicIds.has(topicId)) throw new Error("Научная тема не найдена");
+
+  const transaction = database.transaction(() => {
+    for (const [kind, table] of Object.entries(relationTables) as Array<[keyof TopicRelationSelection, string]>) {
+      const desired = new Set(selections[kind] || []);
+      const rows = database
+        .prepare(`SELECT id, related_topic_ids_json FROM ${table}`)
+        .all() as Array<{ id: string; related_topic_ids_json: string | null }>;
+      const update = database.prepare(`UPDATE ${table} SET related_topic_ids_json = ?, updated_at = ? WHERE id = ?`);
+
+      for (const row of rows) {
+        const current = fromJsonArray(row.related_topic_ids_json);
+        const linked = current.includes(topicId);
+        const shouldLink = desired.has(row.id);
+        const replacement = replacements[`${kind}:${row.id}`];
+        if (!linked && !shouldLink && replacement) {
+          if (replacement === topicId || !topicIds.has(replacement)) {
+            throw new Error(`Для материала «${row.id}» выбрана некорректная научная тема`);
+          }
+          update.run(toJson([...new Set([...current, replacement])]), now(), row.id);
+          continue;
+        }
+        if (linked === shouldLink) continue;
+
+        let next = shouldLink
+          ? [...new Set([...current, topicId])]
+          : current.filter((id) => id !== topicId);
+
+        if (!shouldLink && next.length === 0) {
+          if (!replacement || replacement === topicId || !topicIds.has(replacement)) {
+            throw new Error(`Материал «${row.id}» должен быть привязан хотя бы к одной научной теме`);
+          }
+          next = [replacement];
+        }
+
+        update.run(toJson(next), now(), row.id);
+      }
+    }
+
+    database.prepare(`
+      UPDATE topics SET
+        related_publication_ids_json = ?, related_photo_ids_json = ?, related_archive_ids_json = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      toJson(selections.publications || []),
+      toJson(selections.photos || []),
+      toJson(selections.archive || []),
+      now(),
+      topicId,
+    );
+  });
+
+  transaction();
+  return { ok: true };
+}
+
 export function deleteTopic(id: string) {
   const item = getPortalSnapshot().topics.find((t) => t.id === id);
   if (item) {
@@ -1043,10 +1177,10 @@ export function createArchiveItem(
     .prepare(`
       INSERT INTO archive_items (
         id, title, atype, desc, file_path, year, region, topic, owner_comment, access, status_label,
-        related_publication_ids_json, related_photo_ids_json, dot, created_at, updated_at, attachments_json
+        related_publication_ids_json, related_photo_ids_json, dot, created_at, updated_at, attachments_json, related_topic_ids_json
       ) VALUES (
         @id, @title, @atype, @desc, @file_path, @year, @region, @topic, @owner_comment, @access, @status_label,
-        @related_publication_ids_json, @related_photo_ids_json, @dot, @created_at, @updated_at, @attachments_json
+        @related_publication_ids_json, @related_photo_ids_json, @dot, @created_at, @updated_at, @attachments_json, @related_topic_ids_json
       )
     `)
     .run({
@@ -1059,6 +1193,7 @@ export function createArchiveItem(
       created_at: timestamp,
       updated_at: timestamp,
       attachments_json: toJson(item.attachments || []),
+      related_topic_ids_json: toJson(item.relatedTopicIds || []),
     });
 
   return item;
@@ -1084,7 +1219,7 @@ export function updateArchiveItem(id: string, patch: Partial<ArchiveItem>) {
           topic = @topic, owner_comment = @owner_comment, access = @access, status_label = @status_label,
           related_publication_ids_json = @related_publication_ids_json,
           related_photo_ids_json = @related_photo_ids_json, dot = @dot, updated_at = @updated_at,
-          attachments_json = @attachments_json
+          attachments_json = @attachments_json, related_topic_ids_json = @related_topic_ids_json
       WHERE id = @id
     `)
     .run({
@@ -1096,6 +1231,7 @@ export function updateArchiveItem(id: string, patch: Partial<ArchiveItem>) {
       related_photo_ids_json: toJson(next.relatedPhotoIds),
       updated_at: now(),
       attachments_json: toJson(next.attachments || []),
+      related_topic_ids_json: toJson(next.relatedTopicIds || []),
     });
 
   return next;
@@ -1119,14 +1255,15 @@ export function createLibraryItem(
 
   db()
     .prepare(`
-      INSERT INTO library_items (id, title, authors, year, category, source, pdf_path, notes, access, created_at, updated_at)
-      VALUES (@id, @title, @authors, @year, @category, @source, @pdf_path, @notes, @access, @created_at, @updated_at)
+      INSERT INTO library_items (id, title, authors, year, category, source, pdf_path, notes, access, created_at, updated_at, related_topic_ids_json)
+      VALUES (@id, @title, @authors, @year, @category, @source, @pdf_path, @notes, @access, @created_at, @updated_at, @related_topic_ids_json)
     `)
     .run({
       ...item,
       pdf_path: item.pdfPath,
       created_at: timestamp,
       updated_at: timestamp,
+      related_topic_ids_json: toJson(item.relatedTopicIds || []),
     });
 
   return item;
@@ -1141,10 +1278,11 @@ export function updateLibraryItem(id: string, patch: Partial<LibraryItem>) {
     .prepare(`
       UPDATE library_items
       SET title = @title, authors = @authors, year = @year, category = @category,
-          source = @source, pdf_path = @pdf_path, notes = @notes, access = @access, updated_at = @updated_at
+          source = @source, pdf_path = @pdf_path, notes = @notes, access = @access, updated_at = @updated_at,
+          related_topic_ids_json = @related_topic_ids_json
       WHERE id = @id
     `)
-    .run({ ...next, pdf_path: next.pdfPath, updated_at: now() });
+    .run({ ...next, pdf_path: next.pdfPath, updated_at: now(), related_topic_ids_json: toJson(next.relatedTopicIds || []) });
 
   return next;
 }
