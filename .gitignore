@@ -13,6 +13,10 @@ build/
 .env.*
 !.env.example
 
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
 # User uploads
 public/uploads/
 uploads/
